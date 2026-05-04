@@ -1,0 +1,16 @@
+{#-
+  Official chat template for Junjie-Ye/TL-CodeLLaMA-2 — copied verbatim
+  from the model's HuggingFace card (Junjie-Ye/TL-CodeLLaMA-2):
+
+  Format produced:
+    system: <content>
+    user: <content>
+    assistant: <content>
+    Assistant:                              ← when add_generation_prompt=True
+
+  Note: role keys come straight from the OpenAI message structure (lowercase
+  "system" / "user" / "assistant"). The trailing "Assistant:" generation
+  prompt is hard-coded with capital A — this matches what the model was
+  trained on per the HF README example output.
+-#}
+{% for message in messages %}{{message['role'] + ': ' + message['content']}}{% if loop.last %}{% if add_generation_prompt %}{{ '\nAssistant:' }}{% else %}{{ '</s>'}}{% endif %}{% else %}{{ '\n' }}{% endif %}{% endfor %}

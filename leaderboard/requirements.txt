@@ -1,0 +1,12 @@
+gradio==4.44.0
+pandas>=2.1
+# huggingface_hub 1.x removed HfFolder which gradio 4.x still imports;
+# pin to the 0.x series that gradio 4.44 was built against.
+huggingface_hub>=0.24,<1.0
+# starlette >=0.40 changed TemplateResponse(name, ctx) -> TemplateResponse(request, name, ctx),
+# but gradio 4.44 still calls the old signature, producing
+# "TypeError: unhashable type: 'dict'" at jinja2 cache lookup time.
+# Pin to a starlette release that still accepts the old signature.
+starlette>=0.36,<0.40
+# python_version: "3.11" in README.md frontmatter ensures the runtime ships
+# the stdlib audioop module that gradio<5 / pydub imports. No extra pin needed.
