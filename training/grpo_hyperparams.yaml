@@ -1,0 +1,74 @@
+# GRPO hyperparameters used to train ToolRL-DR-Full and ToolRL-DR-Mixed.
+# This file is human-readable summary of the flags passed to veRL's
+# `verl.trainer.main_ppo` in `training/grpo_launch.sh`. The launcher itself
+# is the source of truth.
+
+algorithm:
+  adv_estimator: grpo            # GRPO (vs. PPO's GAE)
+  kl_ctrl:
+    kl_coef: 0.001               # KL coefficient against the reference policy
+
+backbone:
+  hf_id: Qwen/Qwen2.5-3B-Instruct
+  use_remove_padding: True
+  enable_gradient_checkpointing: True
+
+actor:
+  optim:
+    lr: 1.0e-6                   # actor learning rate
+  ppo_mini_batch_size: 128
+  use_dynamic_bsz: True
+  use_kl_loss: False             # KL is enforced via the controller above
+  kl_loss_coef: 0.001
+  kl_loss_type: low_var_kl
+  fsdp_config:
+    param_offload: False
+    grad_offload: False
+    optimizer_offload: False
+
+rollout:
+  name: vllm
+  tensor_model_parallel_size: 1
+  gpu_memory_utilization: 0.6
+  n: 4                            # GRPO samples 4 responses per prompt
+
+reference:
+  fsdp_config:
+    param_offload: True
+
+data:
+  train_batch_size: 512
+  val_batch_size: 128
+  max_prompt_length: 2048
+  max_response_length: 1024
+
+training:
+  total_epochs: 15
+  save_freq: 15
+  test_freq: 5
+  hardware: "2x RTX 6000 Ada (single workstation)"
+  wall_clock_per_run: "approximately 9.3 hours"
+
+dataset_split:
+  dr_full:
+    train_jsonl: training/data/perturbed.jsonl
+    notes: "All 4,000 ToolRL rlla_4k samples replaced with perturbed counterparts."
+    perturbation_distribution:
+      observation: 1362           # realistic_typos + query_paraphrase + paraphrase_{tool,parameter}_description
+      action: 519                 # same_name_{A..E} + redundant
+      reward: 2103                # CD, TD, CD_NT, TD_NT, CD_AB, TD_AB
+  dr_mixed:
+    train_jsonl: training/data/mixed.jsonl
+    notes: "50/50 mix: 2,000 clean + 2,000 perturbed."
+
+reward:
+  description: "ToolRL's structured reward on tool-name and parameter correctness, unmodified."
+  shaping_switches_off:
+    - WITHLENGTH
+    - REFINEDREWARD
+    - COARSEREWARD
+    - STRICTMATCH
+    - CORRECTMAX1
+    - MAX1STEP30MAX3
+    - SCHEDULEREWARD
+    - SCHEDULELENGTH

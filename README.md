@@ -15,12 +15,14 @@ are not included.
 | `hf_data/datasets/api_eval/` | 17 JSONL files: 16 static perturbation cells + the clean baseline (3{,}721 predictions per model in total). The 6 Transition variants are produced at runtime by `scripts/run_eval.py`, not stored as separate files. |
 | `scripts/` | Inference runner (`run_eval.py`), reparser (`reparse_predictions.py`), model manifest, and SLURM templates. See `scripts/README.md`. |
 | `leaderboard/` | HuggingFace Space implementation: Gradio app, deterministic scorer, leaderboard CSV. See `leaderboard/README.md`. |
+| `training/` | Reproduction recipe for ToolRL-DR-Full and ToolRL-DR-Mixed: the three training JSONL splits (clean / perturbed / mixed), a parquet conversion script, the GRPO launcher, and a hyperparameter manifest. See `training/README.md`. |
 
 ## Trained checkpoints
 
 ToolRL-DR-Full and ToolRL-DR-Mixed weights are hosted on HuggingFace and
 will be released alongside the camera-ready version of the paper.
-Identifiers are withheld during double-blind review.
+Identifiers are withheld during double-blind review. The training data
+and recipe needed to reproduce them from scratch are in `training/`.
 
 ## Quick start
 
@@ -45,6 +47,25 @@ python leaderboard/scoring/eval_results.py \
 
 The full SLURM end-to-end pipeline (boot vLLM → 17 single-mode files →
 6 Transition variants → score → teardown) is in `scripts/slurm/`.
+
+## Reproducing ToolRL-DR (optional)
+
+```bash
+# 1. Convert one of the training JSONLs to veRL parquet format:
+python training/convert_to_parquet.py \
+    --input  training/data/perturbed.jsonl \
+    --output-dir training/parquet/dr_full
+
+# 2. Launch GRPO (assumes the public ToolRL repo is on PYTHONPATH;
+#    see training/README.md for setup):
+DATA_DIR=training/parquet/dr_full \
+BASE_MODEL=Qwen/Qwen2.5-3B-Instruct \
+EXPERIMENT_NAME=toolrl-dr-full \
+N_GPUS=2 ROLLOUT_TP_SIZE=1 \
+bash training/grpo_launch.sh
+```
+
+Use `training/data/mixed.jsonl` instead for ToolRL-DR-Mixed.
 
 ## License
 

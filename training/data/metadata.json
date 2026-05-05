@@ -1,0 +1,70 @@
+{
+  "source": "ToolRL rlla_4k (ToolACE 2000 + Hammer Masked 1000 + xLAM 1000)",
+  "total_samples": 4000,
+  "tool_calling": 3518,
+  "response_only": 482,
+  "groups": {
+    "A_clean": {
+      "file": "clean.jsonl",
+      "size": 4000,
+      "description": "ToolRL baseline reproduction"
+    },
+    "B_perturbed": {
+      "file": "perturbed.jsonl",
+      "size": 3984,
+      "description": "All perturbed (our method)",
+      "mdp_distribution": {
+        "observation": 1362,
+        "reward": 2103,
+        "action": 519
+      },
+      "perturbation_counts": {
+        "CD": 380,
+        "CD_AB": 320,
+        "CD_NT": 352,
+        "TD": 386,
+        "TD_AB": 313,
+        "TD_NT": 352,
+        "paraphrase_parameter_description": 340,
+        "paraphrase_tool_description": 351,
+        "query_paraphrase": 338,
+        "realistic_typos": 333,
+        "redundant": 87,
+        "same_name_A": 87,
+        "same_name_B": 86,
+        "same_name_C": 87,
+        "same_name_D": 87,
+        "same_name_E": 85
+      }
+    },
+    "C_mixed": {
+      "file": "mixed.jsonl",
+      "size": 4000,
+      "description": "2000 clean + 2000 perturbed (ablation)",
+      "mdp_distribution": {
+        "reward": 1041,
+        "observation": 693,
+        "action": 260
+      },
+      "perturbation_counts": {
+        "CD": 195,
+        "CD_AB": 151,
+        "CD_NT": 174,
+        "TD": 186,
+        "TD_AB": 161,
+        "TD_NT": 174,
+        "paraphrase_parameter_description": 188,
+        "paraphrase_tool_description": 156,
+        "query_paraphrase": 187,
+        "realistic_typos": 162,
+        "redundant": 43,
+        "same_name_A": 44,
+        "same_name_B": 44,
+        "same_name_C": 44,
+        "same_name_D": 43,
+        "same_name_E": 42
+      }
+    }
+  },
+  "seed": 42
+}
