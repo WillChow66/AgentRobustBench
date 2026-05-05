@@ -1,25 +1,25 @@
 # Training: reproduce ToolRL-DR-Full / ToolRL-DR-Mixed
 
 This directory contains everything needed to retrain the two ToolRL-DR
-checkpoints described in §5 of the paper, on top of the public ToolRL
-recipe with our perturbation-augmented training data substituted in.
+checkpoints described in §5 of the paper. We reuse the public ToolRL
+GRPO recipe (which embeds a fork of veRL) **without modifications**
+to the trainer; we only substitute the training data.
 
-The training itself uses the public ToolRL repository (which embeds a
-fork of veRL's GRPO trainer) **without modifications**. We do not ship a
-copy of veRL; instead we ship the data and the launcher needed to plug
-into the upstream public release.
+The actual files fed to the GRPO trainer are the parquets in `data/`.
+They were produced from our intermediate JSONL sources (not redistributed
+here) by `convert_to_toolrl_parquet.py`, which is included as reference.
 
 ## Layout
 
 | Path | Role |
 |------|------|
-| `data/clean.jsonl` | The original ToolRL `rlla_4k` 4{,}000 training samples reformatted into RobustBench-TC schema. Used as a baseline; reproduces the public **ToolRL-Clean** checkpoint when the launcher points at it. |
-| `data/perturbed.jsonl` | Our 3{,}984 perturbation-augmented samples. **Source for ToolRL-DR-Full.** Distribution: 1{,}362 Observation + 519 Action + 2{,}103 Reward. |
-| `data/mixed.jsonl` | A 50/50 mix (2{,}000 clean + 2{,}000 perturbed). **Source for ToolRL-DR-Mixed.** Same perturbation breakdown, downsampled. |
-| `data/metadata.json` | Sample counts, perturbation breakdown, and seed metadata. |
-| `convert_to_parquet.py` | Converts any of the three JSONLs into the `prompt`/`response` parquet format expected by veRL's GRPO trainer. |
-| `grpo_launch.sh` | End-to-end GRPO launcher. Hyperparameters are identical to the public ToolRL recipe; only `data.train_files` changes between DR-Full and DR-Mixed. |
-| `grpo_hyperparams.yaml` | Human-readable summary of every hyperparameter the launcher sets. |
+| `data/train.parquet` | **DR-Full** training input. 3{,}826 perturbed samples in ToolRL parquet schema (`data_source`, `prompt`, `reward_model`, `extra_info`). Each `prompt` is a list of `{role, content}` messages; each `reward_model.ground_truth` is the ToolRL-format `<think>...</think>\n<tool_call>...</tool_call>` reference output. |
+| `data/mixed_train.parquet` | **DR-Mixed** training input. 4{,}000 samples (~50/50 clean / perturbed). Same schema. |
+| `data/test.parquet` | 79-sample validation split used during training (referenced by `data.val_files` in the GRPO launcher; trainer evaluates on it every 5 epochs). |
+| `convert_to_toolrl_parquet.py` | Reference script that converts source JSONLs in our schema into the ToolRL parquet schema above. The shipped parquets were produced by this script; reviewers do **not** need to rerun it (the JSONL sources are not in this release). |
+| `rlla_perturbed.py` | Reward-function file. **Drop-in replacement** for `verl/utils/reward_score/rlla.py` in the public ToolRL/veRL repo. The only behavioral change vs. upstream is that response-only samples receive a non-zero correctness signal instead of a flat 0.0. |
+| `grpo_launch.sh` | End-to-end GRPO launcher. Hyperparameters identical to the public ToolRL recipe (lr=1e-6, KL=0.001, rollout n=4, 15 epochs); only the data path differs between DR-Full and DR-Mixed. |
+| `grpo_hyperparams.yaml` | Human-readable summary of every flag the launcher sets. |
 
 ## Reproducing a checkpoint
 
@@ -28,60 +28,45 @@ The pipeline is **two steps after a one-time setup**.
 ### Setup (once)
 
 ```bash
-# 1. Clone the public ToolRL repo (which embeds the GRPO trainer).
-#    The exact upstream is cited in §5.2 of the paper. After clone,
-#    install its requirements per its own README (vllm, verl, etc.).
+# 1. Clone the public ToolRL repo (the one cited as ToolRL in the paper).
+#    Follow its own README to install dependencies (vllm, ray, hydra-core,
+#    transformers, torch, ...).
 git clone <public-toolrl-url> /path/to/toolrl
-cd /path/to/toolrl && pip install -r requirements.txt   # follow upstream
+cd /path/to/toolrl && pip install -r requirements.txt
 
-# 2. Make the verl module importable for grpo_launch.sh.
+# 2. Drop in our modified reward-score file (the only ToolRL-side change).
+cp <this-repo>/training/rlla_perturbed.py \
+   /path/to/toolrl/verl/utils/reward_score/rlla.py
+
+# 3. Make verl importable for our launcher:
 export PYTHONPATH="/path/to/toolrl:${PYTHONPATH}"
 ```
 
-### Step 1 — convert the chosen JSONL to parquet
+### Launch — DR-Full
 
 ```bash
-# DR-Full
-python training/convert_to_parquet.py \
-    --input  training/data/perturbed.jsonl \
-    --output-dir training/parquet/dr_full
-
-# DR-Mixed
-python training/convert_to_parquet.py \
-    --input  training/data/mixed.jsonl \
-    --output-dir training/parquet/dr_mixed
-```
-
-Output of each call:
-
-```
-training/parquet/<run>/
-├── train.parquet                   # 98% of samples, used for RL
-├── val.parquet                     # 2% held-out validation
-└── raw_jsonl_for_inspection.jsonl  # the same data flat-jsonl for sanity
-```
-
-### Step 2 — launch GRPO
-
-```bash
-# DR-Full
-DATA_DIR=training/parquet/dr_full \
+TRAIN_FILE=training/data/train.parquet \
+VAL_FILE=training/data/test.parquet \
 BASE_MODEL=Qwen/Qwen2.5-3B-Instruct \
 EXPERIMENT_NAME=toolrl-dr-full \
 N_GPUS=2 ROLLOUT_TP_SIZE=1 \
 bash training/grpo_launch.sh
+```
 
-# DR-Mixed
-DATA_DIR=training/parquet/dr_mixed \
+### Launch — DR-Mixed
+
+```bash
+TRAIN_FILE=training/data/mixed_train.parquet \
+VAL_FILE=training/data/test.parquet \
 BASE_MODEL=Qwen/Qwen2.5-3B-Instruct \
 EXPERIMENT_NAME=toolrl-dr-mixed \
 N_GPUS=2 ROLLOUT_TP_SIZE=1 \
 bash training/grpo_launch.sh
 ```
 
-Each run takes approximately 9.3 hours on a single 2× RTX 6000 Ada
-workstation. Checkpoints land under veRL's standard output directory
-(controlled by `trainer.default_local_dir` in upstream config).
+Each run takes approximately 9.3 hours on a 2× RTX 6000 Ada workstation.
+Checkpoints land under veRL's standard output directory (controlled by
+`trainer.default_local_dir` in upstream config).
 
 ## Hyperparameters at a glance
 
@@ -95,45 +80,47 @@ PPO mini-batch:       128
 Max prompt length:    2048
 Max response length:  1024
 Total epochs:         15
-Reward:               public ToolRL structured reward (unmodified)
-                      tool-name + parameter correctness; binary 0/1
+Reward:               public ToolRL structured reward, with the small
+                      response-only patch in rlla_perturbed.py
+                      (tool-name + parameter correctness; 0/1 binary)
 ```
 
 See `grpo_hyperparams.yaml` for the full machine-readable manifest.
 
-## Data schema
+## Parquet schema
 
-Each line of `clean.jsonl` / `perturbed.jsonl` / `mixed.jsonl` is one
-training sample with these fields:
+Each row of `data/{train,mixed_train,test}.parquet`:
 
-```jsonc
+```python
 {
-  "id": "toolrl_3939",
-  "benchmark": "toolrl",
-  "category": "toolrl_train",
-  "conversation": [{"role": "user", "content": "..."}],
-  "tools": [{"name": "...", "description": "...", "parameters": {...}}, ...],
-  "golden_answers": [{"name": "...", "parameters": {...}}, ...],
-  "perturbation": {"type": "query_paraphrase", "mdp_category": "observation"},
-  "source": {"dataset": "toolrl_rlla_4k", "original_index": 3939}
+  "data_source": "rlla",
+  "prompt": [
+    {"role": "system", "content": <ToolRL system prompt with tools listed>},
+    {"role": "user",   "content": <dialogue history with <user>...</user> tags>},
+  ],
+  "ability": "math",
+  "reward_model": {
+    "style": "rule",
+    "ground_truth": "<think> ... </think>\n<tool_call>\n{json}\n</tool_call>",
+  },
+  "extra_info": {
+    "split": "train",
+    "index": <int>,
+    "instruction": <same as prompt[0].content>,
+    "input":       <same as prompt[1].content>,
+    "output":      <same as reward_model.ground_truth>,
+    "perturbation": {"type": "...", "mdp_category": "..."},
+    "original_id": <id from RobustBench-TC source jsonl>,
+  },
 }
 ```
 
-For perturbed / mixed samples, `perturbation.type` is one of:
+## Notes
 
-| MDP component | Subtypes |
-|---|---|
-| Observation | `realistic_typos`, `query_paraphrase`, `paraphrase_tool_description`, `paraphrase_parameter_description` |
-| Action | `same_name_A`, `same_name_B`, `same_name_C`, `same_name_D`, `same_name_E`, `redundant` |
-| Reward | `CD`, `TD`, `CD_NT`, `TD_NT`, `CD_AB`, `TD_AB` |
-
-Transition perturbations are intentionally absent from training data.
-They are runtime properties of tool execution and are evaluated only at
-inference time; see §5.1 of the paper for the rationale.
-
-## Notes on randomness
-
-`convert_to_parquet.py` sets `random.seed(args.seed)` (default 42)
-before the train/val shuffle. The veRL GRPO trainer's own randomness
-(rollout sampling, optimizer init) is controlled by veRL's seed flags
-documented upstream.
+- **Transition perturbations are intentionally absent from training data.**
+  They are runtime properties of tool execution and are evaluated only at
+  inference time; see §5.1 of the paper for the rationale.
+- `convert_to_toolrl_parquet.py` reads `np.random.seed(42)` for the
+  train/test split. The shipped `train.parquet` / `test.parquet` were
+  produced with this seed; rerunning with a different value will yield
+  a different split.

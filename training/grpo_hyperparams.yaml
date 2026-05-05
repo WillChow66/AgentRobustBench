@@ -51,18 +51,24 @@ training:
 
 dataset_split:
   dr_full:
-    train_jsonl: training/data/perturbed.jsonl
-    notes: "All 4,000 ToolRL rlla_4k samples replaced with perturbed counterparts."
+    train_parquet: training/data/train.parquet
+    val_parquet:   training/data/test.parquet
+    notes: "All ToolRL rlla_4k samples replaced with perturbed counterparts; 79 held out for validation."
     perturbation_distribution:
       observation: 1362           # realistic_typos + query_paraphrase + paraphrase_{tool,parameter}_description
       action: 519                 # same_name_{A..E} + redundant
       reward: 2103                # CD, TD, CD_NT, TD_NT, CD_AB, TD_AB
   dr_mixed:
-    train_jsonl: training/data/mixed.jsonl
+    train_parquet: training/data/mixed_train.parquet
+    val_parquet:   training/data/test.parquet
     notes: "50/50 mix: 2,000 clean + 2,000 perturbed."
 
 reward:
-  description: "ToolRL's structured reward on tool-name and parameter correctness, unmodified."
+  description: |
+    ToolRL's structured reward on tool-name and parameter correctness,
+    with one small modification in `training/rlla_perturbed.py` (drop-in
+    replacement for `verl/utils/reward_score/rlla.py`): response-only
+    samples receive a non-zero correctness signal instead of 0.0.
   shaping_switches_off:
     - WITHLENGTH
     - REFINEDREWARD

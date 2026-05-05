@@ -15,7 +15,7 @@ are not included.
 | `hf_data/datasets/api_eval/` | 17 JSONL files: 16 static perturbation cells + the clean baseline (3{,}721 predictions per model in total). The 6 Transition variants are produced at runtime by `scripts/run_eval.py`, not stored as separate files. |
 | `scripts/` | Inference runner (`run_eval.py`), reparser (`reparse_predictions.py`), model manifest, and SLURM templates. See `scripts/README.md`. |
 | `leaderboard/` | HuggingFace Space implementation: Gradio app, deterministic scorer, leaderboard CSV. See `leaderboard/README.md`. |
-| `training/` | Reproduction recipe for ToolRL-DR-Full and ToolRL-DR-Mixed: the three training JSONL splits (clean / perturbed / mixed), a parquet conversion script, the GRPO launcher, and a hyperparameter manifest. See `training/README.md`. |
+| `training/` | Reproduction recipe for ToolRL-DR-Full and ToolRL-DR-Mixed: the parquets actually fed to the GRPO trainer (`train.parquet`, `mixed_train.parquet`, `test.parquet`), the reference jsonl→parquet converter, our drop-in reward-score patch (`rlla_perturbed.py`), the GRPO launcher, and a hyperparameter manifest. See `training/README.md`. |
 
 ## Trained checkpoints
 
@@ -50,22 +50,22 @@ The full SLURM end-to-end pipeline (boot vLLM → 17 single-mode files →
 
 ## Reproducing ToolRL-DR (optional)
 
-```bash
-# 1. Convert one of the training JSONLs to veRL parquet format:
-python training/convert_to_parquet.py \
-    --input  training/data/perturbed.jsonl \
-    --output-dir training/parquet/dr_full
+The parquets fed to the GRPO trainer are already in `training/data/`,
+so reviewers do not need to run any conversion. After the one-time setup
+described in `training/README.md` (clone public ToolRL, drop in the
+`rlla_perturbed.py` reward patch, set `PYTHONPATH`):
 
-# 2. Launch GRPO (assumes the public ToolRL repo is on PYTHONPATH;
-#    see training/README.md for setup):
-DATA_DIR=training/parquet/dr_full \
+```bash
+# DR-Full
+TRAIN_FILE=training/data/train.parquet \
+VAL_FILE=training/data/test.parquet \
 BASE_MODEL=Qwen/Qwen2.5-3B-Instruct \
 EXPERIMENT_NAME=toolrl-dr-full \
 N_GPUS=2 ROLLOUT_TP_SIZE=1 \
 bash training/grpo_launch.sh
-```
 
-Use `training/data/mixed.jsonl` instead for ToolRL-DR-Mixed.
+# DR-Mixed: change TRAIN_FILE to training/data/mixed_train.parquet
+```
 
 ## License
 

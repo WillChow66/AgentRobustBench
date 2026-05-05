@@ -1,30 +1,36 @@
 #!/usr/bin/env bash
 # GRPO training launcher for ToolRL-DR-Full / ToolRL-DR-Mixed.
 #
-# This script reproduces the ToolRL public GRPO recipe with our
-# perturbation-augmented training data substituted in. It assumes the
-# public ToolRL repository (which embeds a fork of veRL) has been cloned
-# alongside this anonymous repo; see training/README.md for setup.
+# Reproduces the ToolRL public GRPO recipe with our perturbation-augmented
+# training data substituted in. Assumes the public ToolRL repository has
+# been cloned and is on PYTHONPATH so that `verl.trainer.main_ppo` is
+# importable; see training/README.md for setup.
 #
 # Required env vars:
-#   DATA_DIR        path to the parquet directory produced by
-#                   training/convert_to_parquet.py (must contain
-#                   train.parquet + val.parquet)
+#   TRAIN_FILE      path to one of training/data/{train,mixed_train}.parquet
+#                   (train.parquet -> ToolRL-DR-Full; mixed_train.parquet ->
+#                   ToolRL-DR-Mixed)
+#   VAL_FILE        path to training/data/test.parquet
 #   BASE_MODEL      path or HF id of the backbone (Qwen/Qwen2.5-3B-Instruct)
 #   EXPERIMENT_NAME human-readable run id, e.g. dr_full or dr_mixed
 #   N_GPUS          number of GPUs visible to this job (we use 2)
 #   ROLLOUT_TP_SIZE tensor-parallel size for vLLM rollout (we use 1)
 #
-# Usage:
-#   DATA_DIR=training/parquet/dr_full \
+# Example: ToolRL-DR-Full
+#   TRAIN_FILE=training/data/train.parquet \
+#   VAL_FILE=training/data/test.parquet \
 #   BASE_MODEL=Qwen/Qwen2.5-3B-Instruct \
 #   EXPERIMENT_NAME=toolrl-dr-full \
 #   N_GPUS=2 ROLLOUT_TP_SIZE=1 \
 #   bash training/grpo_launch.sh
+#
+# Example: ToolRL-DR-Mixed
+#   TRAIN_FILE=training/data/mixed_train.parquet ... bash training/grpo_launch.sh
 
 set -euo pipefail
 
-: "${DATA_DIR:?set DATA_DIR to a directory with train.parquet/val.parquet}"
+: "${TRAIN_FILE:=training/data/train.parquet}"
+: "${VAL_FILE:=training/data/test.parquet}"
 : "${BASE_MODEL:?set BASE_MODEL to the backbone model id or path}"
 : "${EXPERIMENT_NAME:?set EXPERIMENT_NAME for the run}"
 : "${N_GPUS:=2}"
@@ -46,8 +52,8 @@ export SCHEDULELENGTH=0
 # data.train_files path differs between DR-Full and DR-Mixed.
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
-    data.train_files="${DATA_DIR}/train.parquet" \
-    data.val_files="${DATA_DIR}/val.parquet" \
+    data.train_files="${TRAIN_FILE}" \
+    data.val_files="${VAL_FILE}" \
     data.train_batch_size=512 \
     data.val_batch_size=128 \
     data.max_prompt_length=2048 \
