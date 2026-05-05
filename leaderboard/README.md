@@ -82,6 +82,6 @@ The CLI is a thin wrapper around `scripts/eval_results.py`.
 - [ ] M4: Persistence to HF Dataset
 - [ ] M5: Leaderboard rendering (sorted by overall acc, with per-MDP-component drop columns)
 - [ ] M6: Deployed on HF Space `<anonymized>/robustbench-tc-leaderboard`
-- [ ] M7: Documentation + first submission with our 18 evaluated models
+- [ ] M7: Documentation + first submission with our 21 evaluated models
 
 ETA for M1--M5: 1 week eng. M6 + M7 another 2 days.
