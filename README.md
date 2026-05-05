@@ -1,42 +1,50 @@
 # RobustBench-TC
 
 Production-grounded sim-to-real robustness benchmark and domain-randomized
-RL recipe for tool-use language agents.
+RL recipe for tool-use language agents (NeurIPS 2026 D&B-track submission,
+under double-blind review).
 
-This repository contains:
+This repository contains the **runnable, reviewer-facing release** of the
+benchmark and leaderboard pipeline. Paper-internal analysis and figure code
+are not included.
 
-- `scripts/`              — eval pipeline, figure/table renderer, audit pipeline
-- `scripts/slurm/`        — SLURM templates for end-to-end one-model eval jobs
-- `leaderboard/`          — HuggingFace Space implementation (live URL withheld for double-blind review)
-- `hf_data/datasets/api_eval/` — 17 perturbation JSONLs + clean baseline (3{,}721 predictions per model)
+## Layout
+
+| Directory | Contents |
+|-----------|----------|
+| `hf_data/datasets/api_eval/` | 17 JSONL files: 16 static perturbation cells + the clean baseline (3{,}721 predictions per model in total). The 6 Transition variants are produced at runtime by `scripts/run_eval.py`, not stored as separate files. |
+| `scripts/` | Inference runner (`run_eval.py`), reparser (`reparse_predictions.py`), model manifest, and SLURM templates. See `scripts/README.md`. |
+| `leaderboard/` | HuggingFace Space implementation: Gradio app, deterministic scorer, leaderboard CSV. See `leaderboard/README.md`. |
 
 ## Trained checkpoints
 
-ToolRL-DR-Full and ToolRL-DR-Mixed weights are hosted on HuggingFace and will
-be released alongside the camera-ready version of the paper. Identifiers are
-withheld during double-blind review.
+ToolRL-DR-Full and ToolRL-DR-Mixed weights are hosted on HuggingFace and
+will be released alongside the camera-ready version of the paper.
+Identifiers are withheld during double-blind review.
 
 ## Quick start
 
 ```bash
-# Run the eval pipeline against any vLLM endpoint:
+# 1. Run inference against any vLLM endpoint:
 python scripts/run_eval.py \
     --model-name <model-id> \
     --endpoint <vllm-endpoint>/v1 \
     --data-dir hf_data/datasets/api_eval \
-    --output-dir results/<model-safe-name> \
+    --output-dir results/<safe-name> \
     --mode single \
     --skip-multi-turn
 
-# Score the predictions: predictions JSONs are scored server-side by the
-# leaderboard Space; submit them via the live submission portal listed in
-# the paper.
-#
-# Render figures + tables for the paper:
-python scripts/render_figures.py
-python scripts/fig_hero.py
-python scripts/fig2_scaling.py
+# 2. Score the predictions (deterministic; no API key required):
+python leaderboard/scoring/eval_results.py \
+    --predictions results/<safe-name> \
+    --output      results/<safe-name>/scores.json
+
+# 3. Or submit `results/<safe-name>/` to the public leaderboard Space
+#    (the Space runs the same scorer server-side).
 ```
+
+The full SLURM end-to-end pipeline (boot vLLM → 17 single-mode files →
+6 Transition variants → score → teardown) is in `scripts/slurm/`.
 
 ## License
 
