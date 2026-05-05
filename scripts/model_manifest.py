@@ -54,10 +54,10 @@ class ModelConfig:
 
 MODELS: Dict[str, ModelConfig] = {
 
-    # ── Original 6 tool-specialized models (from ICML) ─────────────
+    # ── Open-source tool-specialized RL / SFT models ───────────────
     # NOTE: max_model_len values reflect each model's HF config.json
     # max_position_embeddings. We often set lower than the HF max to
-    # conserve KV-cache memory — our prompts are ≤3K tokens and we cap
+    # conserve KV-cache memory — our prompts are <=3K tokens and we cap
     # generation at max_tokens=1024 (4096 for reasoning models below).
     "chengq9/ToolRL-Qwen2.5-1.5B": ModelConfig(
         hf_name="chengq9/ToolRL-Qwen2.5-1.5B",
@@ -85,9 +85,7 @@ MODELS: Dict[str, ModelConfig] = {
         max_model_len=16384,   # HF max: 16384; full to be safe
         category="tool_sft",
         notes="Non-standard chat template (System:/User:/Assistant:/Output:); "
-              "provide --chat-template scripts/slurm/tl_codellama_chat_template.jinja. "
-              "Known issue: even with chat template, raw_output is empty — "
-              "investigate whether to switch runner to /v1/completions API.",
+              "provide --chat-template scripts/slurm/tl_codellama_chat_template.jinja.",
     ),
     "zhuiguang-ning/LoopTool-8B": ModelConfig(
         hf_name="zhuiguang-ning/LoopTool-8B",
@@ -204,10 +202,10 @@ MODELS: Dict[str, ModelConfig] = {
         notes="Base for MUA-RL-32B and LoopTool-32B. Non-thinking.",
     ),
 
-    # ── Our proposed RL-trained model (teammate training) ──────────
-    # Our trained ToolRL-DR checkpoints (delivered by teammate).
+    # ── Our proposed ToolRL-DR checkpoints ─────────────────────────
     # Backbone: Qwen2.5-3B-Instruct. Match the same eval mode used for the
     # public ToolRL-Qwen2.5-3B (prompt mode) so the comparison is apples-to-apples.
+    # HF identifiers anonymized for double-blind review.
     "<anonymized>/qwen2.5-3b-toolrl-robustbench-perturbed": ModelConfig(
         hf_name="<anonymized>/qwen2.5-3b-toolrl-robustbench-perturbed",
         gpus=1, dtype="bfloat16", max_model_len=8192,
@@ -220,14 +218,6 @@ MODELS: Dict[str, ModelConfig] = {
         category="proposed_rl",
         notes="ToolRL-DR-Mixed: RL on mixed_train.parquet "
               "(clean + perturbed mixture).",
-    ),
-
-    # ── Ablation-only: SFT on same perturbed data ──────────────────
-    "robustbench/SFT-Robust-Qwen2.5-3B": ModelConfig(
-        hf_name="robustbench/SFT-Robust-Qwen2.5-3B",  # placeholder
-        gpus=1, dtype="bfloat16", max_model_len=8192,
-        category="proposed_sft",
-        notes="Ablation only: shows gain is from data, not RL.",
     ),
 
     # ── Base pairs for RL-training ablation ────────────────────────
@@ -287,13 +277,13 @@ MODELS: Dict[str, ModelConfig] = {
     #
     # "google/gemma-4-26B-A4B-it": ModelConfig(...)
 
-    # ── Frontier closed-source (handled by teammate via API) ───────
-    # Not served via local vLLM; teammate calls OpenAI endpoint directly.
+    # ── Frontier closed-source (called via OpenAI API) ─────────────
+    # Not served via local vLLM; called via the OpenAI Chat Completions API.
     "openai/o4-mini": ModelConfig(
         hf_name="openai/o4-mini",  # identifier only; not served locally
         gpus=0, dtype="",
         category="frontier_closed",
-        notes="No local vLLM — teammate handles via OpenAI API. "
+        notes="Closed-source; no local vLLM. "
               "Pass as --model-name o4-mini --endpoint https://api.openai.com/v1 "
               "with OPENAI_API_KEY set.",
     ),

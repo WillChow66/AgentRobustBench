@@ -129,11 +129,10 @@ conda activate "${CONDA_ENV}" || {
     exit 2
 }
 
-# <HPC-cluster>: vllm lives in user-local site-packages (/u/.../.local/...),
-# while torch lives in the shared base env. Ensure user-local is
-# explicitly on PYTHONPATH for sbatch jobs (srun inherits it automatically;
-# sbatch's --export=ALL,VAR=X handling can drop user-site under some
-# SLURM configs).
+# Some HPC environments install vllm into user-local site-packages while
+# torch lives in the shared base env. Ensure user-local is explicitly on
+# PYTHONPATH for sbatch jobs (srun inherits it automatically; sbatch's
+# --export=ALL,VAR=X handling can drop user-site under some SLURM configs).
 USER_SITE="$(python -c 'import site; print(site.getusersitepackages())')"
 if [[ -d "${USER_SITE}" ]]; then
     export PYTHONPATH="${USER_SITE}${PYTHONPATH:+:${PYTHONPATH}}"

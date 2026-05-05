@@ -40,7 +40,7 @@ conda create -n rbtc-vllm --clone base       # run once
 conda activate rbtc-vllm
 pip install -r <repo-root>/scripts/requirements.txt
 
-# Point HF cache at /work/hdd (home has no space for big models)
+# Point HF cache somewhere with disk space (home dir is usually too small)
 export HF_HOME=<repo-root>/cache/hf/.cache/huggingface
 mkdir -p "${HF_HOME}"
 
@@ -118,15 +118,14 @@ bash scripts/slurm/submit_all.sh --models 'Qwen/*' 'google/*'
 ```
 
 Categories defined in `model_manifest.py`:
-- `tool_rl_small` / `tool_rl` / `tool_rl_large` / `tool_sft` — original 6
-- `proposed_rl` — teammate's perturbed-RL-trained ckpts (2)
-- `proposed_sft` — SFT ablation on same data (1)
-- `base_pair` — Qwen2.5/Llama base models for RL-effect ablation (2)
-- `frontier_open` — Qwen3.5-9B / DeepSeek-R1-Distill / Gemma-4 (3)
+- `tool_rl_small` / `tool_rl` / `tool_rl_large` / `tool_sft` — open-source tool models
+- `proposed_rl` — our perturbed-RL-trained ckpts (2; HF ids anonymized)
+- `base_pair` — Qwen2.5/Llama base models for RL-effect ablation (3)
+- `frontier_open` — Qwen3.5-9B / DeepSeek-R1-Distill (2)
 - `frontier_closed` — `o4-mini` (skipped by submit_all; use OpenAI API)
 
-`o4-mini` is handled separately by teammate via OpenAI API — not through
-this pipeline.
+`o4-mini` is closed-source and called separately via the OpenAI API,
+not through this local-vLLM pipeline.
 
 ## Manual (non-SLURM) invocation
 

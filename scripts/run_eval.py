@@ -88,8 +88,8 @@ BFCL_SYSTEM_PROMPT_TEMPLATE = (
 
 # ────────────────────────────────────────────────────────────────
 # Transition perturbation: 6 transient-error message variants.
-# Mirrors TRANSITION_ERROR_MESSAGES in the teammate-authored
-# run_transition_eval_{apibank,rotbench,toolalpaca,tooleyes}.py scripts.
+# Six transient-error string templates (one per Transition variant). The
+# scorer also keys on these, so do not edit without updating the scorer.
 # ────────────────────────────────────────────────────────────────
 
 TRANSITION_ERROR_MESSAGES: Dict[str, str] = {
@@ -1157,10 +1157,7 @@ def run_single_pass(
 # ────────────────────────────────────────────────────────────────
 
 def _format_tool_call_for_injection(tool_calls: List[Dict[str, Any]]) -> str:
-    """Get a display name for the tool call that triggered the failure.
-
-    Matches the format used by the teammate's run_transition_eval_apibank.py.
-    """
+    """Get a display name for the tool call that triggered the failure."""
     if not tool_calls:
         return "unknown_tool"
     first = tool_calls[0]
