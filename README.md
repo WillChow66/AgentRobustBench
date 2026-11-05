@@ -12,11 +12,54 @@ NeurIPS 2026 · Evaluations & Datasets Track
 
 **199 seed tasks · 22 perturbation types · 3,721 evaluation cases · 21 models evaluated**
 
-[Benchmark](#benchmark) · [Results](#results) · [Quick start](#quick-start) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
+[Five-minute reproduction](#reproduce-a-paper-result-in-five-minutes) · [Benchmark](#benchmark) · [Results](#results) · [Full evaluation](#quick-start) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
 
 </div>
 
 AgentRobustBench measures how tool-use language agents handle failures that arise in deployment, from typos and ambiguous tool names to API timeouts. It pairs a robustness benchmark with **ToolRL-DR**, a reinforcement learning recipe that trains agents on varied tool-use trajectories.
+
+## Reproduce a paper result in five minutes
+
+**Requires only Git and Python 3.** Recompute the paper's finding that ToolRL-DR-Full closes about 27% of the 3B ToolRL baseline's Transition gap.
+
+```bash
+git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
+cd AgentRobustBench
+python3 scripts/reproduce_transition_gap.py
+```
+
+Expected output:
+
+```text
+ToolRL-Clean Transition gap:    31.49 pp
+ToolRL-DR-Full Transition gap:  23.11 pp
+Gap reduction:                  8.38 pp
+Baseline gap closed:            26.6%
+```
+
+The script computes each model's gap as clean accuracy minus Transition accuracy, then divides the gap reduction by the baseline gap. It uses the [released leaderboard scores](leaderboard/leaderboard.csv). This reproduces the calculation from aggregate scores. Running fresh model inference requires an endpoint.
+
+### Run a small evaluation on your model
+
+If you already have a local vLLM endpoint, run the first three matched tasks from the clean and typo splits. This gives six scored cases through the same inference and scoring entry points used for the full benchmark.
+
+```bash
+python3 -m pip install openai tqdm
+MODEL='your-served-model-id'
+python3 scripts/run_eval.py \
+    --model-name "$MODEL" \
+    --endpoint http://localhost:8000/v1 \
+    --data-dir hf_data/datasets/api_eval \
+    --files clean.jsonl realistic_typos.jsonl \
+    --limit 3 --temperature 0 \
+    --output-dir results/quick-demo
+
+python3 leaderboard/scoring/eval_results.py \
+    --predictions results/quick-demo \
+    --output results/quick-demo/scores.json
+```
+
+The scorer reports `n=6` after a successful run. Accuracy depends on your model. See [Full evaluation quick start](#quick-start) for the full splits and [the training guide](training/README.md) for retraining.
 
 ## Benchmark
 
