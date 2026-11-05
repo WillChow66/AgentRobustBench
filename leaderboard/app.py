@@ -4,7 +4,7 @@ Run locally:
     pip install -r requirements.txt
     python app.py
 
-Hosted Space: https://huggingface.co/spaces/willchow66/robustbench-tc-leaderboard
+Hosted Space: https://huggingface.co/spaces/willchow66/AgentRobustBench
 
 Submission flow (BFCL-style):
     1. User downloads the benchmark data from https://huggingface.co/datasets/robustbench-tc/RobustBench-TC.
