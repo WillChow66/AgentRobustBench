@@ -7,7 +7,7 @@
 NeurIPS 2026 · Evaluations & Datasets Track
 
 [![Paper on arXiv](https://img.shields.io/badge/arXiv-2605.11928-b31b1b)](https://arxiv.org/abs/2605.11928)
-[![Hugging Face dataset](https://img.shields.io/badge/Hugging%20Face-Dataset-FFD21E)](https://huggingface.co/datasets/robustbench-tc/RobustBench-TC)
+[![Hugging Face dataset](https://img.shields.io/badge/Hugging%20Face-Dataset-FFD21E)](https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench)
 [![Live leaderboard](https://img.shields.io/badge/Hugging%20Face-Leaderboard-7C3AED)](https://huggingface.co/spaces/willchow66/AgentRobustBench)
 
 **199 seed tasks · 22 perturbation types · 3,721 evaluation cases · 21 models evaluated**
@@ -72,7 +72,7 @@ The scorer reports `n=6` after a successful run. Accuracy depends on your model.
 | Reward-relevant metadata | Information that steers tool choice | A misleading tool name or response-time annotation |
 | Transition | The response to a tool call | A transient timeout on the first attempt |
 
-The [Hugging Face dataset](https://huggingface.co/datasets/robustbench-tc/RobustBench-TC) contains **2,718 static records**. The evaluation runner adds **1,003 runtime cases** for a total of **3,721**. Submit predictions or browse per-category scores on the [live leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench).
+The [Hugging Face dataset](https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench) contains **2,718 static records**. The evaluation runner adds **1,003 runtime cases** for a total of **3,721**. Submit predictions or browse per-category scores on the [live leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench).
 
 ## Results
 
