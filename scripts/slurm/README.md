@@ -45,7 +45,7 @@ export HF_HOME=<repo-root>/cache/hf/.cache/huggingface
 mkdir -p "${HF_HOME}"
 
 # Pull the eval dataset once (21.6 MB)
-hf download robustbench-tc/RobustBench-TC \
+hf download AgentRobustBench/AgentRobustBench \
     --repo-type dataset --include '*.jsonl' \
     --local-dir <repo-root>/hf_data/datasets/api_eval
 ```

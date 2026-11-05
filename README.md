@@ -4,7 +4,7 @@ A sim-to-real robustness benchmark and domain-randomized reinforcement learning
 recipe for tool-use language agents, accepted at NeurIPS 2026
 (Evaluations & Datasets Track).
 
-[Dataset](https://huggingface.co/datasets/robustbench-tc/RobustBench-TC) ·
+[Dataset](https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench) ·
 [Leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench)
 
 ## Layout

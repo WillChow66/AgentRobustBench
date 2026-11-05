@@ -61,7 +61,7 @@ A valid submission is a JSON file with this shape:
 }
 ```
 
-The expected `sample_id` and `perturbation` values are documented in our HF dataset `robustbench-tc/RobustBench-TC`.
+The expected `sample_id` and `perturbation` values are documented in our HF dataset `AgentRobustBench/AgentRobustBench`.
 
 ## Score locally
 

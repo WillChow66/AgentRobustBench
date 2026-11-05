@@ -7,7 +7,7 @@ Run locally:
 Hosted Space: https://huggingface.co/spaces/willchow66/AgentRobustBench
 
 Submission flow (BFCL-style):
-    1. User downloads the benchmark data from https://huggingface.co/datasets/robustbench-tc/RobustBench-TC.
+    1. User downloads the benchmark data from https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench.
     2. User runs their model on their own GPU to produce predictions
        (with the released inference helper).
     3. User uploads predictions JSON to this Space.
@@ -280,7 +280,7 @@ with gr.Blocks(title="AgentRobustBench Leaderboard",
         "A sim-to-real robustness leaderboard for tool-use language agents. "
         "**Run inference on your own hardware**, upload the predictions JSON, "
         "and we score it server-side. See the schema in the *Submit* tab.\n\n"
-        "[Dataset](https://huggingface.co/datasets/robustbench-tc/RobustBench-TC) · "
+        "[Dataset](https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench) · "
         "[Evaluation code](https://github.com/WillChow66/AgentRobustBench)"
     )
     with gr.Tab("Leaderboard"):
