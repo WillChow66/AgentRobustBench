@@ -1,5 +1,5 @@
 """
-Model manifest for RobustBench-TC NeurIPS evaluation.
+Model manifest for AgentRobustBench NeurIPS evaluation.
 
 Each entry maps a model id (the ``--model-name`` we pass to run_eval.py) to
 the vLLM server config needed to serve it. Consumed by the SLURM templates

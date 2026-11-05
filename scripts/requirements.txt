@@ -1,4 +1,4 @@
-# RobustBench-TC evaluation runtime dependencies.
+# AgentRobustBench evaluation runtime dependencies.
 # Install into a dedicated conda env on the compute node:
 #
 #   module load python/miniforge3_pytorch/2.10.0

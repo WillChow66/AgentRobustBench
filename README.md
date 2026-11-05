@@ -1,12 +1,11 @@
 # AgentRobustBench
 
-Production-grounded sim-to-real robustness benchmark and domain-randomized
-RL recipe for tool-use language agents (NeurIPS 2026 D&B-track submission,
-under double-blind review).
+A sim-to-real robustness benchmark and domain-randomized reinforcement learning
+recipe for tool-use language agents, accepted at NeurIPS 2026
+(Evaluations & Datasets Track).
 
-This repository contains the **runnable, reviewer-facing release** of the
-benchmark and leaderboard pipeline. Paper-internal analysis and figure code
-are not included.
+[Dataset](https://huggingface.co/datasets/robustbench-tc/RobustBench-TC) ·
+[Leaderboard](https://huggingface.co/spaces/willchow66/robustbench-tc-leaderboard)
 
 ## Layout
 
@@ -19,10 +18,7 @@ are not included.
 
 ## Trained checkpoints
 
-ToolRL-DR-Full and ToolRL-DR-Mixed weights are hosted on HuggingFace and
-will be released alongside the camera-ready version of the paper.
-Identifiers are withheld during double-blind review. The training data
-and recipe needed to reproduce them from scratch are in `training/`.
+The training data and instructions for reproducing ToolRL-DR-Full and ToolRL-DR-Mixed are in [training/](training/).
 
 ## Quick start
 
@@ -51,7 +47,7 @@ The full SLURM end-to-end pipeline (boot vLLM → 17 single-mode files →
 ## Reproducing ToolRL-DR (optional)
 
 The parquets fed to the GRPO trainer are already in `training/data/`,
-so reviewers do not need to run any conversion. After the one-time setup
+so you can train without running the data converter. After the one-time setup
 described in `training/README.md` (clone public ToolRL, drop in the
 `rlla_perturbed.py` reward patch, set `PYTHONPATH`):
 

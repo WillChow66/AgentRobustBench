@@ -1,18 +1,13 @@
-"""RobustBench-TC live leaderboard (HuggingFace Space MVP).
+"""AgentRobustBench leaderboard on Hugging Face Spaces.
 
 Run locally:
     pip install -r requirements.txt
     python app.py
 
-Deploy on HF Spaces:
-    huggingface-cli login
-    huggingface-cli repo create robustbench-tc-leaderboard --type space --space_sdk gradio
-    git remote add space https://huggingface.co/spaces/<HF_USERNAME>/robustbench-tc-leaderboard
-    git add . && git commit -m "init" && git push space main
+Hosted Space: https://huggingface.co/spaces/willchow66/robustbench-tc-leaderboard
 
 Submission flow (BFCL-style):
-    1. User downloads the api_eval dataset (link withheld for double-blind
-       review; will be released with the camera-ready version).
+    1. User downloads the benchmark data from https://huggingface.co/datasets/robustbench-tc/RobustBench-TC.
     2. User runs their model on their own GPU to produce predictions
        (with the released inference helper).
     3. User uploads predictions JSON to this Space.
@@ -278,15 +273,15 @@ def submit(file) -> tuple[str, pd.DataFrame]:
     )
 
 
-with gr.Blocks(title="RobustBench-TC Leaderboard",
+with gr.Blocks(title="AgentRobustBench Leaderboard",
                analytics_enabled=False) as demo:
-    gr.Markdown("# RobustBench-TC Leaderboard")
+    gr.Markdown("# AgentRobustBench Leaderboard")
     gr.Markdown(
         "A sim-to-real robustness leaderboard for tool-use language agents. "
         "**Run inference on your own hardware**, upload the predictions JSON, "
         "and we score it server-side. See the schema in the *Submit* tab.\n\n"
-        "Dataset and inference helper will be released alongside the camera-ready "
-        "version of the paper; identifiers are withheld during double-blind review."
+        "[Dataset](https://huggingface.co/datasets/robustbench-tc/RobustBench-TC) · "
+        "[Evaluation code](https://github.com/WillChow66/AgentRobustBench)"
     )
     with gr.Tab("Leaderboard"):
         gr.Markdown(
@@ -325,7 +320,7 @@ with gr.Blocks(title="RobustBench-TC Leaderboard",
                                   outputs=[out_msg, out_table])
     with gr.Tab("About"):
         gr.Markdown(
-            "**Why server-side scoring only?** RobustBench-TC includes 32B-scale "
+            "**Why server-side scoring only?** AgentRobustBench includes 32B-scale "
             "models which exceed HuggingFace Space free-tier hardware limits. "
             "Following the BFCL leaderboard pattern, contributors run their model "
             "locally and submit a predictions JSON. We re-run only the deterministic "

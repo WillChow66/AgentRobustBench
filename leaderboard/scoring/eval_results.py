@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RobustBench-TC results evaluator.
+AgentRobustBench results evaluator.
 
 Consumes the `.predictions.jsonl` files produced by `run_eval.py`, dispatches
 scoring by `sample.eval_config.method`, and aggregates metrics by
@@ -413,7 +413,7 @@ def aggregate(scored_records: List[Dict[str, Any]]) -> Dict[str, Any]:
 # ────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="RobustBench-TC scorer.")
+    parser = argparse.ArgumentParser(description="AgentRobustBench scorer.")
     parser.add_argument("--predictions", required=True,
                         help="Directory containing *.predictions.jsonl files.")
     parser.add_argument("--files", nargs="*", default=None,

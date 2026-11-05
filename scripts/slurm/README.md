@@ -1,7 +1,7 @@
-# RobustBench-TC: Running the NeurIPS Evaluation Pipeline on <HPC-cluster>
+# AgentRobustBench: Running the NeurIPS Evaluation Pipeline on <HPC-cluster>
 
 Evaluate a tool-calling checkpoint against the unified
-`<anonymized>/RobustBench-TC / datasets/api_eval` benchmark (16 perturbation
+`AgentRobustBench` benchmark (16 perturbation
 files + clean baseline + 6 runtime transition variants). Scoring is fully
 deterministic — **no OpenAI API key required for scoring**.
 
@@ -45,9 +45,9 @@ export HF_HOME=<repo-root>/cache/hf/.cache/huggingface
 mkdir -p "${HF_HOME}"
 
 # Pull the eval dataset once (21.6 MB)
-huggingface-cli download <anonymized>/RobustBench-TC \
-    --repo-type dataset --include 'datasets/api_eval/*' \
-    --local-dir <repo-root>/hf_data
+hf download robustbench-tc/RobustBench-TC \
+    --repo-type dataset --include '*.jsonl' \
+    --local-dir <repo-root>/hf_data/datasets/api_eval
 ```
 
 ## Evaluate one model (SLURM end-to-end)

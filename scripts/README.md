@@ -1,6 +1,6 @@
-# RobustBench-TC: Evaluation Scripts
+# AgentRobustBench: Evaluation Scripts
 
-This directory contains the runnable parts of the RobustBench-TC evaluation pipeline. There is intentionally **no figure-rendering or paper-analysis code here**; those are paper-internal and live in our private development repo.
+This directory contains the runnable parts of the AgentRobustBench evaluation pipeline. There is intentionally **no figure-rendering or paper-analysis code here**; those are paper-internal and live in our private development repo.
 
 ## Files
 

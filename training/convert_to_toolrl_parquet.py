@@ -30,7 +30,7 @@ np.random.seed(42)
 # ═══════════════════════════════════════════════════════════════
 import os as _os
 # Directory holding our source JSONLs (perturbed.jsonl, mixed.jsonl) in
-# the RobustBench-TC training schema. These intermediate JSONLs are not
+# the AgentRobustBench training schema. These intermediate JSONLs are not
 # redistributed in the anonymous release; the final parquets shipped in
 # `training/data/` were produced by running this script on them.
 TRAIN_DIR = Path(_os.environ.get("TRAIN_DIR", "<your-jsonl-source-dir>"))

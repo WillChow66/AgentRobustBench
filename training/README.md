@@ -110,7 +110,7 @@ Each row of `data/{train,mixed_train,test}.parquet`:
     "input":       <same as prompt[1].content>,
     "output":      <same as reward_model.ground_truth>,
     "perturbation": {"type": "...", "mdp_category": "..."},
-    "original_id": <id from RobustBench-TC source jsonl>,
+    "original_id": <id from AgentRobustBench source jsonl>,
   },
 }
 ```

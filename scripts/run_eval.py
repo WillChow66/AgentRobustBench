@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RobustBench-TC inference runner.
+AgentRobustBench inference runner.
 
 Reads perturbation JSONL files from the HuggingFace `api_eval` directory
 (each sample carries its own benchmark / category / eval_config / golden_answers
@@ -1412,7 +1412,7 @@ def run_file(
 # ────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="RobustBench-TC inference runner.")
+    parser = argparse.ArgumentParser(description="AgentRobustBench inference runner.")
     parser.add_argument("--model-name", required=True,
                         help="Model identifier as registered on the vLLM server.")
     parser.add_argument("--endpoint", default="http://localhost:8000/v1",

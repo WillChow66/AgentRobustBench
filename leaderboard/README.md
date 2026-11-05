@@ -1,5 +1,5 @@
 ---
-title: RobustBench-TC Leaderboard
+title: AgentRobustBench Leaderboard
 emoji: 🛠️
 colorFrom: blue
 colorTo: purple
@@ -12,7 +12,7 @@ short_description: Sim-to-real robustness leaderboard for tool-use LLM agents
 python_version: "3.11"
 ---
 
-# RobustBench-TC Leaderboard (MVP)
+# AgentRobustBench Leaderboard
 
 > A BFCL-style live leaderboard for tool-use sim-to-real robustness, deployed as a HuggingFace Space.
 
@@ -61,27 +61,16 @@ A valid submission is a JSON file with this shape:
 }
 ```
 
-The expected `sample_id` and `perturbation` values are documented in our HF dataset `<anonymized>/RobustBench-TC`.
+The expected `sample_id` and `perturbation` values are documented in our HF dataset `robustbench-tc/RobustBench-TC`.
 
-## Local-eval CLI
+## Score locally
 
-We provide a CLI that runs the same scorer locally so users can validate before submitting:
+Run the scorer from the [code repository](https://github.com/WillChow66/AgentRobustBench) using a directory of prediction JSONL files:
 
 ```bash
-pip install robustbench-tc
-robustbench-tc score --predictions my_predictions.json --output scores.json
+python leaderboard/scoring/eval_results.py --predictions results/<model> --output scores.json
 ```
 
-The CLI is a thin wrapper around `scripts/eval_results.py`.
+## Hosted leaderboard
 
-## Status
-
-- [ ] M1: Gradio app skeleton (this directory)
-- [ ] M2: Submission validator (schema + sample-ID coverage check)
-- [ ] M3: Hosted scorer reusing `scripts/eval_results.py`
-- [ ] M4: Persistence to HF Dataset
-- [ ] M5: Leaderboard rendering (sorted by overall acc, with per-MDP-component drop columns)
-- [ ] M6: Deployed on HF Space `<anonymized>/robustbench-tc-leaderboard`
-- [ ] M7: Documentation + first submission with our 21 evaluated models
-
-ETA for M1--M5: 1 week eng. M6 + M7 another 2 days.
+[Open the leaderboard](https://huggingface.co/spaces/willchow66/robustbench-tc-leaderboard) to submit predictions.

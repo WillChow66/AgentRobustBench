@@ -11,7 +11,7 @@
 #SBATCH --output=<repo-root>/scripts/logs/rbtc_%x_%j.out
 #SBATCH --error=<repo-root>/scripts/logs/rbtc_%x_%j.err
 #
-# RobustBench-TC — single-model end-to-end evaluator on <HPC-cluster>.
+# AgentRobustBench — single-model end-to-end evaluator on <HPC-cluster>.
 # Starts a local vLLM server on the allocated GH200 GPU(s), runs our
 # scripts/run_eval.py (single-mode + transition-mode), then
 # scripts/eval_results.py, then tears down the vLLM server.
@@ -85,7 +85,7 @@ export HF_HOME
 mkdir -p "${HF_HOME}"
 
 echo "=============================================="
-echo " RobustBench-TC eval"
+echo " AgentRobustBench eval"
 echo " Job ID       : ${SLURM_JOB_ID:-local}"
 echo " Node         : $(hostname)"
 echo " Start        : $(date)"

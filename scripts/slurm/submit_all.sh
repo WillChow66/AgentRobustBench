@@ -1,5 +1,5 @@
 #!/bin/bash
-# Submit RobustBench-TC eval SLURM jobs for the 13 models in model_manifest.py.
+# Submit AgentRobustBench eval SLURM jobs for the 13 models in model_manifest.py.
 #
 # Usage:
 #   # Submit everything (default: all models, with transition=timeout):
