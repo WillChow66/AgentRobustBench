@@ -73,4 +73,4 @@ python leaderboard/scoring/eval_results.py --predictions results/<model> --outpu
 
 ## Hosted leaderboard
 
-[Open the leaderboard](https://huggingface.co/spaces/willchow66/robustbench-tc-leaderboard) to submit predictions.
+[Open the leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench) to submit predictions.
