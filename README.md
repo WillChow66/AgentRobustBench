@@ -5,7 +5,7 @@ recipe for tool-use language agents, accepted at NeurIPS 2026
 (Evaluations & Datasets Track).
 
 [Dataset](https://huggingface.co/datasets/robustbench-tc/RobustBench-TC) ·
-[Leaderboard](https://huggingface.co/spaces/willchow66/robustbench-tc-leaderboard)
+[Leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench)
 
 ## Layout
 
