@@ -12,7 +12,7 @@ NeurIPS 2026 · Evaluations & Datasets Track
 
 **199 seed tasks · 22 perturbation types · 3,721 evaluation cases · 21 models evaluated**
 
-[Five-minute reproduction](#reproduce-a-paper-result-in-five-minutes) · [Benchmark](#benchmark) · [Results](#results) · [Full evaluation](#quick-start) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
+[Five-minute reproduction](#reproduce-a-paper-result-in-five-minutes) · [Benchmark](#benchmark) · [Results](#results) · [Full evaluation](#quick-start) · [Checkpoints](#model-checkpoints) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
 
 </div>
 
@@ -41,11 +41,17 @@ The script computes each model's gap as clean accuracy minus Transition accuracy
 
 ### Run a small evaluation on your model
 
-If you already have a local vLLM endpoint, run the first three matched tasks from the clean and typo splits. This gives six scored cases through the same inference and scoring entry points used for the full benchmark.
+With vLLM installed and a GPU available, start a local endpoint for the released Full checkpoint in one terminal. You can substitute `willchow66/ToolRL-DR-Mixed-Qwen2.5-3B` to evaluate Mixed.
+
+```bash
+vllm serve willchow66/ToolRL-DR-Full-Qwen2.5-3B --port 8000 --max-model-len 8192
+```
+
+In a second terminal, run the first three matched tasks from the clean and typo splits. This gives six scored cases through the same inference and scoring entry points used for the full benchmark.
 
 ```bash
 python3 -m pip install openai tqdm
-MODEL='your-served-model-id'
+MODEL='willchow66/ToolRL-DR-Full-Qwen2.5-3B' # Use the same ID you passed to vllm serve.
 python3 scripts/run_eval.py \
     --model-name "$MODEL" \
     --endpoint http://localhost:8000/v1 \
@@ -89,9 +95,14 @@ The plot shows how much clean accuracy models retain across Observation, Action,
 | `leaderboard/` | HuggingFace Space implementation: Gradio app, deterministic scorer, leaderboard CSV. See `leaderboard/README.md`. |
 | `training/` | Reproduction recipe for ToolRL-DR-Full and ToolRL-DR-Mixed: the parquets actually fed to the GRPO trainer (`train.parquet`, `mixed_train.parquet`, `test.parquet`), the reference jsonl→parquet converter, our drop-in reward-score patch (`rlla_perturbed.py`), the GRPO launcher, and a hyperparameter manifest. See `training/README.md`. |
 
-## Training artifacts
+## Model checkpoints
 
-The training data and instructions for reproducing ToolRL-DR-Full and ToolRL-DR-Mixed are in [training/](training/).
+| Checkpoint | Training data | Model card |
+| --- | --- | --- |
+| ToolRL-DR-Full (step 150) | Perturbed trajectories | [Hugging Face](https://huggingface.co/willchow66/ToolRL-DR-Full-Qwen2.5-3B) |
+| ToolRL-DR-Mixed (step 155) | Clean and perturbed trajectories | [Hugging Face](https://huggingface.co/willchow66/ToolRL-DR-Mixed-Qwen2.5-3B) |
+
+The checkpoints are based on Qwen2.5-3B-Instruct and use the [Qwen Research License](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/blob/main/LICENSE). See [training/](training/) for the training data and reproduction instructions.
 
 ## Quick start
 

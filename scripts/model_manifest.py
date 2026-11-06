@@ -205,15 +205,14 @@ MODELS: Dict[str, ModelConfig] = {
     # ── Our proposed ToolRL-DR checkpoints ─────────────────────────
     # Backbone: Qwen2.5-3B-Instruct. Match the same eval mode used for the
     # public ToolRL-Qwen2.5-3B (prompt mode) so the comparison is apples-to-apples.
-    # HF identifiers anonymized for double-blind review.
-    "<anonymized>/qwen2.5-3b-toolrl-robustbench-perturbed": ModelConfig(
-        hf_name="<anonymized>/qwen2.5-3b-toolrl-robustbench-perturbed",
+    "willchow66/ToolRL-DR-Full-Qwen2.5-3B": ModelConfig(
+        hf_name="willchow66/ToolRL-DR-Full-Qwen2.5-3B",
         gpus=1, dtype="bfloat16", max_model_len=8192,
         category="proposed_rl",
         notes="ToolRL-DR-Full: RL on 100% perturbed trajectories.",
     ),
-    "<anonymized>/qwen2.5-3b-toolrl-robustbench-mixed": ModelConfig(
-        hf_name="<anonymized>/qwen2.5-3b-toolrl-robustbench-mixed",
+    "willchow66/ToolRL-DR-Mixed-Qwen2.5-3B": ModelConfig(
+        hf_name="willchow66/ToolRL-DR-Mixed-Qwen2.5-3B",
         gpus=1, dtype="bfloat16", max_model_len=8192,
         category="proposed_rl",
         notes="ToolRL-DR-Mixed: RL on mixed_train.parquet "

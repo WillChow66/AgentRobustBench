@@ -21,6 +21,11 @@ here) by `convert_to_toolrl_parquet.py`, which is included as reference.
 | `grpo_launch.sh` | End-to-end GRPO launcher. Hyperparameters identical to the public ToolRL recipe (lr=1e-6, KL=0.001, rollout n=4, 15 epochs); only the data path differs between DR-Full and DR-Mixed. |
 | `grpo_hyperparams.yaml` | Human-readable summary of every flag the launcher sets. |
 
+## Published checkpoints
+
+- [ToolRL-DR-Full, step 150](https://huggingface.co/willchow66/ToolRL-DR-Full-Qwen2.5-3B)
+- [ToolRL-DR-Mixed, step 155](https://huggingface.co/willchow66/ToolRL-DR-Mixed-Qwen2.5-3B)
+
 ## Reproducing a checkpoint
 
 The pipeline is **two steps after a one-time setup**.
