@@ -14,15 +14,15 @@ NeurIPS 2026 · Evaluations & Datasets Track
 
 **199 seed tasks · 22 perturbation types · 3,721 evaluation cases · 21 models evaluated**
 
-[Run the checkpoint](#run-six-examples) · [Benchmark](#benchmark) · [Results](#results) · [Full evaluation](docs/REPRODUCIBILITY.md) · [Checkpoints](#model-checkpoints) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
+[Evaluate the benchmark](#evaluate-the-full-benchmark) · [Benchmark](#benchmark) · [Results](#results) · [Checkpoints](#model-checkpoints) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
 
 </div>
 
 AgentRobustBench measures how tool-use language agents handle failures that arise in deployment, from typos and ambiguous tool names to API timeouts. It pairs a robustness benchmark with **ToolRL-DR**, a reinforcement learning recipe that trains agents on varied tool-use trajectories.
 
-## Run six examples
+## Evaluate the full benchmark
 
-This runs the released checkpoint on **three clean tasks and their three typo variants**, then scores the generated tool calls. Choose where the model will run:
+Run **ToolRL-DR-Full** or **ToolRL-DR-Mixed** on the complete AgentRobustBench: **3,721 evaluation cases**, covering the clean baseline and all 22 perturbation types. Choose where the model will run:
 
 | Your computer | How to run |
 | --- | --- |
@@ -73,40 +73,38 @@ This prints your platform, selected device, available system RAM, and package ve
 
 `auto` tries CUDA first, then MPS, then CPU. If you expected CUDA but see `cpu`, check that your NVIDIA driver and CUDA-enabled PyTorch are installed. On Mac, check MPS availability with your macOS/PyTorch versions. To explicitly select a device, replace `auto` with `cpu`, `mps`, or `cuda`; an unavailable explicit device produces an error.
 
-### 3. Run Full or Mixed
+### 3. Evaluate Full or Mixed on the complete benchmark
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint full --device auto
+python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
 ```
 
 For Mixed, run:
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint mixed --device auto
+python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
 ```
 
 Both commands automatically load the matching HF tokenizer and checkpoint, generate predictions using the benchmark's prompts and parsers, and run the existing scorer. The data comes with the repository. After the first download, HF normally reuses its local cache. These commands use the device selected by the check above. To force CPU inference, replace `--device auto` with `--device cpu`.
 
 ### 4. Read the results
 
-The scorer prints **`n=6`** and the accuracy measured from your model outputs. The last line prints a new directory under `results/` containing:
+A completed run prints **`n=3721`** and the path to a new output directory under `results/`. Full and Mixed runs save their results separately.
 
 | File | Contents |
 | --- | --- |
-| `clean.predictions.jsonl`, `realistic_typos.predictions.jsonl` | Generated text and parsed tool calls. |
-| `scores.json` | Aggregate accuracy. |
-| `per_sample_scores.jsonl` | Score for each example. |
+| `comparison.csv` | Your measured `Clean`, `Pert. Acc.`, and four category accuracies, alongside released reference scores and differences in percentage points. |
+| `scores.json` | All aggregate scores, including results by source benchmark and perturbation type. |
+| `*.predictions.jsonl`, `transition_*/*.predictions.jsonl` | Generated text and parsed tool calls for the static and runtime cases. |
+| `per_sample_scores.jsonl` | A score for every evaluation case. |
 | `_run_summary.json` | Processed counts and errors. |
-| `run_metadata.json` | Checkpoint revision, data hashes, device, precision, package versions, seed, and measured load/evaluation times. |
+| `run_metadata.json` | Checkpoint revision, data hashes, device, precision, package versions, seed, and load/evaluation times. |
 
-The six-example run checks the evaluation workflow. To run every case and compare newly measured scores with the released scores:
+To compare with the paper, use the matching columns in **`comparison.csv`**. `Clean` measures the 199 clean cases; `Pert. Acc.` measures the 3,522 perturbed cases. The console's top-level `accuracy` combines both groups.
 
-```bash
-python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
-python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
-```
+`--checkpoint full` and `--checkpoint mixed` select the model. **`--suite full` selects the complete benchmark and is also the script's default.** CPU runs can take substantially longer than GPU runs.
 
-A complete run scores **3,721 cases** and also writes `comparison.csv` with measured scores, released scores, and differences in percentage points. See [reproduction details](docs/REPRODUCIBILITY.md) and [the vLLM guide](scripts/README.md) for other serving setups.
+See [metric definitions](docs/REPRODUCIBILITY.md) or the [optional vLLM server guide](scripts/README.md) for more detail.
 
 ## Benchmark
 
@@ -144,12 +142,6 @@ The plot shows how much clean accuracy models retain across Observation, Action,
 | ToolRL-DR-Mixed | Clean and perturbed trajectories | [Hugging Face](https://huggingface.co/willchow66/ToolRL-DR-Mixed-Qwen2.5-3B) |
 
 The checkpoints are based on Qwen2.5-3B-Instruct and use the [Qwen Research License](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/blob/main/LICENSE). See [training/](training/) for the training data and reproduction instructions.
-
-## Full evaluation with a model server
-
-Start with [six examples](scripts/README.md#run-six-examples), then follow [full benchmark evaluation](scripts/README.md#full-benchmark-evaluation) to run all static splits and the six runtime perturbations. The guide includes the install commands, model-server check, inference commands, scoring command, and output locations.
-
-For cluster users, the SLURM pipeline is in [`scripts/slurm/`](scripts/slurm/). It needs your cluster's account, paths, and scheduler settings.
 
 ## Reproducing ToolRL-DR (optional)
 

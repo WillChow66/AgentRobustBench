@@ -2,9 +2,9 @@
 
 [Project home](../README.md) · [中文入门指南](../README_zh-CN.md)
 
-For direct CPU, Apple MPS, or CUDA inference without a model server, start with the [project quick start](../README.md#run-six-examples). This page describes the optional vLLM server/client workflow.
+For direct CPU, Apple MPS, or CUDA inference without a model server, start with the [project quick start](../README.md#evaluate-the-full-benchmark). This page describes the optional vLLM server/client workflow.
 
-## Run six examples with vLLM
+## Evaluate the full benchmark with vLLM
 
 The walkthrough uses **Linux, Python 3.11 or 3.12, Git, and an NVIDIA GPU supported by vLLM**. Check [vLLM's installation requirements](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/) for GPU and driver compatibility. vLLM automatically downloads the checkpoint from Hugging Face when the server first starts and reuses the local cache on later runs. Allow time and disk space for the first download.
 
@@ -53,45 +53,57 @@ python -c "import json, urllib.request; print(json.load(urllib.request.urlopen('
 
 The last command should print `willchow66/ToolRL-DR-Full-Qwen2.5-3B`. If you see a connection error, check terminal 1 and wait for the server to finish starting.
 
-### 3. Generate six predictions
+### 3. Generate predictions for the complete benchmark
 
-In **terminal 2**, paste this entire command block:
+<a id="full-benchmark-evaluation"></a>
+
+In **terminal 2**, run all static cases:
 
 ```bash
 python scripts/run_eval.py \
     --model-name willchow66/ToolRL-DR-Full-Qwen2.5-3B \
     --endpoint http://localhost:8000/v1 \
     --data-dir hf_data/datasets/api_eval \
-    --files clean.jsonl realistic_typos.jsonl \
-    --limit 3 --temperature 0 --max-workers 1 \
-    --output-dir results/quick-demo
+    --output-dir results/toolrl-dr-full \
+    --mode single --temperature 0
 ```
 
-This runs three clean examples and their three typo variants. The runner summary should show `processed=3` and `errors=0` for each file. It saves:
+Then run all six runtime error types:
 
-```text
-results/quick-demo/
-  clean.predictions.jsonl
-  realistic_typos.predictions.jsonl
-  _run_summary.json
+```bash
+for T in timeout rate_limit auth_error server_error malformed_response schema_drift; do
+  python scripts/run_eval.py \
+      --model-name willchow66/ToolRL-DR-Full-Qwen2.5-3B \
+      --endpoint http://localhost:8000/v1 \
+      --data-dir hf_data/datasets/api_eval \
+      --output-dir results/toolrl-dr-full \
+      --mode transition --transition-type "$T" --temperature 0
+done
 ```
 
-Each predictions file contains one JSON record per example, including the model's output. If `errors` is nonzero, inspect the `error` field in those files and the server log before scoring.
+Check each runner summary for `errors=0` before scoring. Predictions are saved
+under `results/toolrl-dr-full/`, with runtime cases in `transition_*/`.
 
-### 4. Score and inspect the results
+### 4. Score the complete benchmark
 
 Still in **terminal 2**, run:
 
 ```bash
 python leaderboard/scoring/eval_results.py \
-    --predictions results/quick-demo \
-    --output results/quick-demo/scores.json \
-    --per-sample-output results/quick-demo/per_sample_scores.jsonl
+    --predictions results/toolrl-dr-full \
+    --output results/toolrl-dr-full/scores.json \
+    --per-sample-output results/toolrl-dr-full/per_sample_scores.jsonl
 ```
 
-The console summary should start with `n=6`. It also reports accuracy by benchmark and perturbation category. Open `results/quick-demo/scores.json` for aggregate scores and `per_sample_scores.jsonl` to inspect each example. These six examples check the workflow; use the full benchmark below for a paper-scale comparison. Scoring uses no model judge or external API.
+A complete run processes **2,527 static cases** and **1,194 runtime cases**
+(199 × 6), and the scorer should report **n=3721**. The runner skips 191
+multi-turn records in the static files. The top-level accuracy includes clean
+and perturbed cases; compare matching per-category metrics with the paper.
 
-To try ToolRL-DR-Mixed, replace the model ID in both terminals with `willchow66/ToolRL-DR-Mixed-Qwen2.5-3B` and use a new output directory such as `results/quick-demo-mixed`.
+To evaluate ToolRL-DR-Mixed, use
+`willchow66/ToolRL-DR-Mixed-Qwen2.5-3B` for the model server and all inference
+commands, and use a separate output directory such as `results/toolrl-dr-mixed`
+for inference and scoring.
 
 ### If you already have a model server
 
@@ -114,46 +126,7 @@ py -3.11 -m venv .venv
 
 On Windows, replace `python` in the evaluation commands with `.\.venv\Scripts\python.exe` and put each command on one line, removing the trailing `\` line continuations.
 
-In steps 3–4, use your server's reachable URL ending in `/v1` for `--endpoint` and its registered model ID for `--model-name`. `localhost` means the computer running that command; use it only when the server is on the same computer. Pass `--api-key` if your endpoint requires authentication. Local vLLM uses the runner's default placeholder, so no OpenAI account or key is needed.
-
-## Full benchmark evaluation
-
-With the server running and the environment active, run the following in **terminal 2** from the project directory. First evaluate all static splits:
-
-```bash
-python scripts/run_eval.py \
-    --model-name willchow66/ToolRL-DR-Full-Qwen2.5-3B \
-    --endpoint http://localhost:8000/v1 \
-    --data-dir hf_data/datasets/api_eval \
-    --output-dir results/toolrl-dr-full \
-    --mode single --temperature 0
-```
-
-Then run the six runtime perturbations. This loop is for Linux or macOS terminals:
-
-```bash
-for T in timeout rate_limit auth_error server_error malformed_response schema_drift; do
-  python scripts/run_eval.py \
-      --model-name willchow66/ToolRL-DR-Full-Qwen2.5-3B \
-      --endpoint http://localhost:8000/v1 \
-      --data-dir hf_data/datasets/api_eval \
-      --output-dir results/toolrl-dr-full \
-      --mode transition --transition-type "$T" --temperature 0
-done
-```
-
-Finally, score the entire output directory, including the `transition_*` subdirectories:
-
-```bash
-python leaderboard/scoring/eval_results.py \
-    --predictions results/toolrl-dr-full \
-    --output results/toolrl-dr-full/scores.json \
-    --per-sample-output results/toolrl-dr-full/per_sample_scores.jsonl
-```
-
-A complete run processes **2,527 static cases** and **1,194 runtime cases** (199 × 6), so the scorer should report **n=3721**. The runner skips 191 multi-turn records present in the static files.
-
-Use a separate output directory per model and per experiment. `--resume` continues an interrupted run by skipping saved IDs; retry failed predictions in a new directory instead. Generation settings and model-specific flags are described in [`model_manifest.py`](model_manifest.py) and the [SLURM guide](slurm/README.md).
+In step 3, use your server's reachable URL ending in `/v1` for `--endpoint` and its registered model ID for `--model-name`. `localhost` means the computer running that command; use it only when the server is on the same computer. Pass `--api-key` if your endpoint requires authentication. Local vLLM uses the runner's default placeholder, so no OpenAI account or key is needed.
 
 ## Common problems
 
@@ -165,7 +138,7 @@ Use a separate output directory per model and per experiment. `--resume` continu
 | Cannot connect to the endpoint | Keep the model server running, wait for startup, and check the URL using step 2. |
 | Model not found by the server | Use the model ID printed by the step 2 check. |
 | CUDA out of memory | Stop other GPU jobs or use a GPU with more free memory. See [vLLM memory guidance](https://docs.vllm.ai/en/latest/configuration/conserving_memory/). |
-| `n` is not 6 in the small example | Use a new output directory containing only this six-example run, and check both files' runner summaries. |
+| `n` is not 3721 | Confirm that all static files and all six runtime error types completed, and score the correct output directory. |
 
 ## Files and cluster jobs
 

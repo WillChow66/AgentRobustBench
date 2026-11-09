@@ -1,6 +1,6 @@
 # Checkpoint evaluation and reproduction
 
-[English quick start](../README.md#run-six-examples) · [中文入门](../README_zh-CN.md#运行六个模型评测样本)
+[English quick start](../README.md#evaluate-the-full-benchmark) · [中文入门](../README_zh-CN.md#完整-benchmark-评测)
 
 ## Run the released models
 
@@ -40,16 +40,15 @@ local runner, not a claim about the original training seed. The original vLLM
 model-specific settings remain in [`scripts/model_manifest.py`](../scripts/model_manifest.py).
 Different precision and inference backends can change generated predictions.
 
-## From a small run to full results
+## Evaluate the complete benchmark
 
 ```bash
-# Three clean tasks and the same three typo tasks; generates and scores six outputs.
-python scripts/evaluate_checkpoint.py --checkpoint full --device cpu
-
-# Full evaluation, including all six runtime error types.
 python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
 python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
 ```
+
+Both commands run the entire benchmark with the selected checkpoint.
+`--suite full` is the default; `--checkpoint` selects Full or Mixed.
 
 The full suite uses 2,527 static single-turn records plus 199 × 6 runtime cases,
 for 3,721 scored cases. It skips the 191 multi-turn records in the static files.

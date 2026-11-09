@@ -38,6 +38,30 @@ class ConfigurationTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_default_run_scores_the_entire_benchmark(self):
+        # Exercise real dataset loading, all static/runtime jobs, and the scorer.
+        # Only model generation is replaced, to keep this a CPU-only CI check.
+        client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
+            create=lambda **kwargs: SimpleNamespace(choices=[SimpleNamespace(
+                message=SimpleNamespace(content="[]", tool_calls=None))])
+        )))
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / "output"
+            with patch("transformers.AutoTokenizer.from_pretrained"), \
+                 patch("transformers.AutoModelForCausalLM.from_pretrained"), \
+                 patch.object(workflow, "LocalModelClient", return_value=client):
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    result = workflow.main(["--device", "cpu", "--output-dir", str(output)])
+            self.assertEqual(result, 0)
+            scores = json.loads((output / "scores.json").read_text())
+            self.assertEqual(scores["overall"]["overall"]["n"], 3721)
+            self.assertEqual(scores["overall"]["by_mdp_category"]["clean"]["n"], 199)
+            self.assertEqual(scores["overall"]["by_mdp_category"]["transition"]["n"], 1194)
+            self.assertEqual(len(list(output.glob("transition_*"))), 6)
+            self.assertTrue((output / "comparison.csv").is_file())
+            metadata = json.loads((output / "run_metadata.json").read_text())
+            self.assertEqual(metadata["suite"], "full")
+
     def test_endpoint_runner_exits_nonzero_after_request_errors(self):
         import run_eval
         def fail(**kwargs):
@@ -108,7 +132,7 @@ class WorkflowTests(unittest.TestCase):
             Qwen2ForCausalLM(config).save_pretrained(model_dir)
             result = subprocess.run([
                 sys.executable, str(ROOT / "scripts/evaluate_checkpoint.py"),
-                "--device", "cpu", "--model-path", str(model_dir),
+                "--device", "cpu", "--model-path", str(model_dir), "--suite", "demo",
                 "--max-tokens", "4", "--max-context", "16384", "--cpu-threads", "1",
                 "--output-dir", str(output),
             ], text=True, capture_output=True, timeout=120)

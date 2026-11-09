@@ -153,7 +153,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", choices=("full", "mixed"), default="full")
     parser.add_argument("--device", choices=("auto", "cpu", "mps", "cuda"), default="auto")
-    parser.add_argument("--suite", choices=("demo", "full"), default="demo")
+    parser.add_argument("--suite", choices=("demo", "full"), default="full",
+                        help="Evaluation scope: full benchmark (default); demo runs six examples.")
     parser.add_argument("--check", action="store_true", help="Check installed dependencies and device; do not download a model.")
     parser.add_argument("--max-tokens", type=int, default=1024)
     parser.add_argument("--max-context", type=int, default=8192)

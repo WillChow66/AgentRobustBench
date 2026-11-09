@@ -16,15 +16,15 @@ NeurIPS 2026 · Evaluations & Datasets Track
 
 **199 个原始任务 · 22 种扰动 · 3,721 个评测案例 · 已评测 21 个模型**
 
-[运行六个模型评测样本](#运行六个模型评测样本) · [基准介绍](#基准介绍) · [实验结果](#实验结果) · [模型权重](#模型权重) · [完整评测](#完整评测) · [训练复现](#训练复现) · [引用](#引用)
+[完整 benchmark 评测](#完整-benchmark-评测) · [基准介绍](#基准介绍) · [实验结果](#实验结果) · [模型权重](#模型权重) · [训练复现](#训练复现) · [引用](#引用)
 
 </div>
 
 AgentRobustBench 评测语言智能体在实际部署变化下能否正确使用工具，例如用户输入有错别字、工具名称容易混淆，或工具调用出现超时。我们同时提供 ToolRL-DR 训练方法，通过在训练中变化工具使用轨迹，提高模型的稳健性。
 
-## 运行六个模型评测样本
+## 完整 benchmark 评测
 
-这一步会加载你选择的 checkpoint，对**三个干净任务及其三个错别字版本**生成预测，再进行评分。先按自己的电脑选择运行方式：
+使用 **ToolRL-DR-Full** 或 **ToolRL-DR-Mixed** 运行整个 AgentRobustBench：**3,721 个评测案例**，覆盖干净基线和全部 22 种扰动。先按自己的电脑选择运行方式：
 
 | 你的电脑 | 运行方式 |
 | --- | --- |
@@ -75,42 +75,40 @@ python scripts/evaluate_checkpoint.py --device auto --check
 
 `auto` 按 CUDA → MPS → CPU 的顺序选择。如果 Windows / Linux 有 NVIDIA 显卡却显示 `cpu`，请检查 NVIDIA 驱动和 CUDA 版 PyTorch。Mac 则需要检查当前 macOS 与 PyTorch 是否支持 MPS。也可以将 `auto` 明确改成 `cpu`、`mps` 或 `cuda`；如果指定设备不可用，脚本会报错提示。
 
-### 第三步：运行 Full 或 Mixed
+### 第三步：使用 Full 或 Mixed 运行完整 benchmark
 
 运行 Full：
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint full --device auto
+python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
 ```
 
 运行 Mixed：
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint mixed --device auto
+python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
 ```
 
 脚本会自动加载对应的 HF tokenizer 和 checkpoint，使用基准原有的提示词与解析器生成预测，再调用原有评分器。评测数据已经随仓库提供，无需另外下载。首次下载后通常会复用 HF 本地缓存。以上命令会使用检查步骤选出的设备。如果只想使用 CPU，将 `--device auto` 改成 `--device cpu`。
 
-### 第四步：查看结果
+### 第四步：查看完整评测结果
 
-评分器会打印 **`n=6`**，以及由这次模型预测得到的准确率。最后一行会显示 `results/` 下新建的输出目录，里面包含：
+完整运行结束后，评分器会打印 **`n=3721`**，并显示 `results/` 下新建的结果目录。Full 和 Mixed 的结果分别保存。
 
 | 文件 | 内容 |
 | --- | --- |
-| `clean.predictions.jsonl`、`realistic_typos.predictions.jsonl` | 模型生成的文本及解析出的工具调用。 |
-| `scores.json` | 汇总准确率。 |
-| `per_sample_scores.jsonl` | 每个样本的评分。 |
+| `comparison.csv` | 本次测得的干净样本准确率、扰动样本准确率及四类扰动准确率，同时列出公开参考分数和相差的百分点。 |
+| `scores.json` | 全部汇总分数，包括按数据来源和扰动类型划分的结果。 |
+| `*.predictions.jsonl`、`transition_*/*.predictions.jsonl` | 静态案例和运行时案例的模型输出及解析后的工具调用。 |
+| `per_sample_scores.jsonl` | 每个评测案例的评分。 |
 | `_run_summary.json` | 处理数量和错误数量。 |
-| `run_metadata.json` | checkpoint 版本、数据哈希、设备、精度、依赖版本、种子，以及这次运行实测的加载和评测耗时。 |
+| `run_metadata.json` | checkpoint 版本、数据哈希、设备、精度、依赖版本、种子，以及加载和评测耗时。 |
 
-六样本用于跑通流程。如果要评测所有案例，并将新测得的分数与公开分数比较，运行：
+**对照论文时，查看 `comparison.csv` 中的对应指标。** `Clean` 是 199 个干净案例的准确率，`Pert. Acc.` 是 3,522 个扰动案例的准确率。控制台最上方的 `accuracy` 混合了这两组案例。
 
-```bash
-python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
-python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
-```
+`--checkpoint full` 或 `--checkpoint mixed` 选择模型；**`--suite full` 表示运行完整 benchmark，也是脚本的默认设置。** CPU 完整评测通常会比 GPU 更耗时。
 
-完整评测会评分 **3,721 个案例**，并额外生成 `comparison.csv`，列出实际得分、公开得分及相差多少个百分点。更多参数、验证范围与论文指标对应关系见[复现说明](docs/REPRODUCIBILITY.md)。
+更多指标定义见[复现说明](docs/REPRODUCIBILITY.md)；使用独立模型服务时，参考 [vLLM 评测指南](scripts/README.md)。
 
 ## 基准介绍
 
@@ -148,12 +146,6 @@ python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device a
 | ToolRL-DR-Mixed | 干净轨迹与扰动轨迹混合 | [Hugging Face](https://huggingface.co/willchow66/ToolRL-DR-Mixed-Qwen2.5-3B) |
 
 两个模型均基于 Qwen2.5-3B-Instruct，使用 [Qwen Research License](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/blob/main/LICENSE)。
-
-## 完整评测
-
-使用上面的 `--suite full` 命令即可运行所有静态文件和六种运行时扰动并评分。若使用独立的模型服务，参考 [vLLM 完整评测命令](scripts/README.md#full-benchmark-evaluation)。
-
-集群用户可以使用 [`scripts/slurm/`](scripts/slurm/) 中的模板。提交作业前，需要替换为自己集群的账户、路径和调度器设置。
 
 ## 训练复现
 
