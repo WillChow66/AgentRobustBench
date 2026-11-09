@@ -16,44 +16,11 @@ NeurIPS 2026 · Evaluations & Datasets Track
 
 **199 个原始任务 · 22 种扰动 · 3,721 个评测案例 · 已评测 21 个模型**
 
-[五分钟复算论文结果](#五分钟复算论文结果) · [运行六个模型评测样本](#运行六个模型评测样本) · [基准介绍](#基准介绍) · [实验结果](#实验结果) · [模型权重](#模型权重) · [完整评测](#完整评测) · [训练复现](#训练复现) · [引用](#引用)
+[运行六个模型评测样本](#运行六个模型评测样本) · [基准介绍](#基准介绍) · [实验结果](#实验结果) · [模型权重](#模型权重) · [完整评测](#完整评测) · [训练复现](#训练复现) · [引用](#引用)
 
 </div>
 
 AgentRobustBench 评测语言智能体在实际部署变化下能否正确使用工具，例如用户输入有错别字、工具名称容易混淆，或工具调用出现超时。我们同时提供 ToolRL-DR 训练方法，通过在训练中变化工具使用轨迹，提高模型的稳健性。
-
-## 五分钟复算论文结果
-
-第一次接触 Python，可以直接使用下面的浏览器示例。它读取公开的排行榜分数，重新计算论文中的一个结果：**ToolRL-DR-Full 相对 3B ToolRL 基线缩小了约 27% 的运行时错误所造成的准确率差距。**
-
-### 方法一：在浏览器运行，无需安装环境或 GPU
-
-[![在 Colab 打开](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/WillChow66/AgentRobustBench/blob/main/docs/quickstart.ipynb)
-
-1. 点击 **在 Colab 打开**。如果页面提示登录，使用 Google 账号登录。
-2. 保持默认的 **CPU** 运行环境。点击菜单 **代码执行程序 → 全部运行（Runtime → Run all）**。如果 Colab 询问是否运行此仓库的笔记本，确认运行。
-3. 在代码单元下方查看结果，应显示：
-
-```text
-ToolRL-Clean Transition gap:    31.49 pp
-ToolRL-DR-Full Transition gap:  23.11 pp
-Gap reduction:                  8.38 pp
-Baseline gap closed:            26.6%
-```
-
-`pp` 表示百分点。计算先分别用各模型的干净样本准确率减去 Transition 准确率，再将两个差距的差值除以基线差距。这个笔记本只下载一个计算脚本和一份很小的分数表。
-
-### 方法二：在自己的电脑运行相同计算
-
-需要先安装 [Git](https://git-scm.com/downloads) 和 [Python 3](https://www.python.org/downloads/)。Mac 打开“终端（Terminal）”，Windows 打开 PowerShell，逐行粘贴并按回车：
-
-```bash
-git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
-cd AgentRobustBench
-python3 scripts/reproduce_transition_gap.py
-```
-
-Windows 用户将最后一行换成 `py scripts/reproduce_transition_gap.py`。输出应与上面的四行一致。这一步无需安装 Python 依赖包、下载模型、填写 API key 或使用 GPU。
 
 ## 运行六个模型评测样本
 
@@ -94,7 +61,7 @@ python -m pip install -r scripts/requirements.txt
 vllm serve willchow66/ToolRL-DR-Full-Qwen2.5-3B --port 8000 --max-model-len 8192
 ```
 
-vLLM 会下载并加载模型，然后等待评测请求。请保持这个终端运行。在服务启动完成后，打开**同一台机器上的终端 2**：
+vLLM 会自动从 Hugging Face 下载并加载模型，然后等待评测请求。后续运行通常会复用本地缓存。请保持这个终端运行。在服务启动完成后，打开**同一台机器上的终端 2**：
 
 ```bash
 cd ~/AgentRobustBench

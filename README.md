@@ -14,50 +14,102 @@ NeurIPS 2026 · Evaluations & Datasets Track
 
 **199 seed tasks · 22 perturbation types · 3,721 evaluation cases · 21 models evaluated**
 
-[Five-minute reproduction](#reproduce-a-paper-result-in-five-minutes) · [Benchmark](#benchmark) · [Results](#results) · [Full evaluation](#quick-start) · [Checkpoints](#model-checkpoints) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
+[Run the checkpoint](#run-six-examples) · [Benchmark](#benchmark) · [Results](#results) · [Full evaluation](#quick-start) · [Checkpoints](#model-checkpoints) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
 
 </div>
 
 AgentRobustBench measures how tool-use language agents handle failures that arise in deployment, from typos and ambiguous tool names to API timeouts. It pairs a robustness benchmark with **ToolRL-DR**, a reinforcement learning recipe that trains agents on varied tool-use trajectories.
 
-## Reproduce a paper result in five minutes
+## Run six examples
 
-New to Python? Start with the browser demo below. It recomputes the paper's finding that ToolRL-DR-Full closes about 27% of the 3B ToolRL baseline's Transition gap, using the released leaderboard scores.
+The walkthrough uses **Linux, Python 3.11 or 3.12, Git, and an NVIDIA GPU supported by vLLM**. Check [vLLM's installation requirements](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/) for GPU and driver compatibility. vLLM automatically downloads the checkpoint from Hugging Face when the server first starts and reuses the local cache on later runs. Allow time and disk space for the first download.
 
-### Option 1: Run in your browser — no installation or GPU
+A terminal is a window where you paste commands and press Enter. Run the following steps in order. Keep terminal 1 open while using terminal 2, on the **same machine**.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/WillChow66/AgentRobustBench/blob/main/docs/quickstart.ipynb)
+### 1. Download the project and install the environment
 
-1. Click **Open in Colab**. Sign in to Google if prompted.
-2. Keep the default **CPU** runtime. Select **Runtime → Run all** and allow execution of this repository's notebook if Colab asks.
-3. Read the output below the code cell. You should see:
-
-```text
-ToolRL-Clean Transition gap:    31.49 pp
-ToolRL-DR-Full Transition gap:  23.11 pp
-Gap reduction:                  8.38 pp
-Baseline gap closed:            26.6%
-```
-
-Here, `pp` means percentage points. The script subtracts Transition accuracy from clean accuracy for each model, then divides the gap reduction by the baseline gap. The notebook downloads only the result calculator and the small score table.
-
-### Option 2: Run the same calculation on your computer
-
-You need [Git](https://git-scm.com/downloads) and [Python 3](https://www.python.org/downloads/). On macOS, open **Terminal**; on Windows, open **PowerShell**. Paste one command at a time, pressing Enter after each:
+In **terminal 1**, check your tools:
 
 ```bash
-git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
-cd AgentRobustBench
-python3 scripts/reproduce_transition_gap.py
+python3 --version
+git --version
+nvidia-smi
 ```
 
-On Windows, use `py scripts/reproduce_transition_gap.py` for the last command. The output should match the four lines above. This calculation needs no Python packages, model download, API key, or GPU.
+`python3` should report Python 3.11 or 3.12, and `nvidia-smi` should list your GPU. If a command is missing, install that tool or use a configured GPU machine before continuing.
 
-### Run the model on six examples
+Download into your home directory, create a separate Python environment, and install the dependencies:
 
-To generate new predictions, follow the [step-by-step evaluation guide](scripts/README.md#run-six-examples). It covers environment installation, starting the released checkpoint, running three clean and three typo examples, and checking the scores. The walkthrough uses a Linux machine with an NVIDIA GPU and Python 3.11 or 3.12. A Mac or Windows computer can also send requests to an existing model server using the client-only setup in that guide.
+```bash
+git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git ~/AgentRobustBench
+cd ~/AgentRobustBench
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r scripts/requirements.txt
+```
 
-After a successful six-example run, the scorer prints `n=6` and writes `results/quick-demo/scores.json`. Model installation, the first checkpoint download, and full benchmark evaluation take additional time. The browser demo above is the five-minute entry point for checking the published calculation.
+If you already downloaded the project, open that directory and start at `python3 -m venv .venv`. The evaluation data is included in the repository. No separate dataset download is needed.
+
+### 2. Start the model server
+
+Still in **terminal 1**, run:
+
+```bash
+vllm serve willchow66/ToolRL-DR-Full-Qwen2.5-3B --port 8000 --max-model-len 8192
+```
+
+vLLM loads the model and waits for evaluation requests. Leave it running. When startup completes, open **terminal 2** on the same machine and run:
+
+```bash
+cd ~/AgentRobustBench
+source .venv/bin/activate
+python -c "import json, urllib.request; print(json.load(urllib.request.urlopen('http://localhost:8000/v1/models'))['data'][0]['id'])"
+```
+
+The last command should print `willchow66/ToolRL-DR-Full-Qwen2.5-3B`. If you see a connection error, check terminal 1 and wait for the server to finish starting.
+
+### 3. Generate six predictions
+
+In **terminal 2**, paste this entire command block:
+
+```bash
+python scripts/run_eval.py \
+    --model-name willchow66/ToolRL-DR-Full-Qwen2.5-3B \
+    --endpoint http://localhost:8000/v1 \
+    --data-dir hf_data/datasets/api_eval \
+    --files clean.jsonl realistic_typos.jsonl \
+    --limit 3 --temperature 0 --max-workers 1 \
+    --output-dir results/quick-demo
+```
+
+This runs three clean examples and their three typo variants. The runner summary should show `processed=3` and `errors=0` for each file. It saves:
+
+```text
+results/quick-demo/
+  clean.predictions.jsonl
+  realistic_typos.predictions.jsonl
+  _run_summary.json
+```
+
+Each predictions file contains one JSON record per example, including the model's output. If `errors` is nonzero, inspect the `error` field in those files and the server log before scoring.
+
+### 4. Score and inspect the results
+
+Still in **terminal 2**, run:
+
+```bash
+python leaderboard/scoring/eval_results.py \
+    --predictions results/quick-demo \
+    --output results/quick-demo/scores.json \
+    --per-sample-output results/quick-demo/per_sample_scores.jsonl
+```
+
+The console summary should start with `n=6`. It also reports accuracy by benchmark and perturbation category. Open `results/quick-demo/scores.json` for aggregate scores and `per_sample_scores.jsonl` to inspect each example. These six examples check the workflow; use the full benchmark below for a paper-scale comparison. Scoring uses no model judge or external API.
+
+To try ToolRL-DR-Mixed, replace the model ID in both terminals with `willchow66/ToolRL-DR-Mixed-Qwen2.5-3B` and use a new output directory such as `results/quick-demo-mixed`.
+
+For a client on another computer, follow the [client-only setup](scripts/README.md#if-you-already-have-a-model-server). For all evaluation cases, continue to [full benchmark evaluation](scripts/README.md#full-benchmark-evaluation).
 
 ## Benchmark
 

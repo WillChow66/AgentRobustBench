@@ -2,11 +2,11 @@
 
 [Project home](../README.md) · [中文入门指南](../README_zh-CN.md)
 
-The [browser demo](https://colab.research.google.com/github/WillChow66/AgentRobustBench/blob/main/docs/quickstart.ipynb) recomputes a published result on CPU. This guide shows how to run a model, generate new predictions, and score them.
+This guide shows how to load the released Hugging Face checkpoint, generate predictions on benchmark examples, and score the outputs.
 
 ## Run six examples
 
-The walkthrough uses **Linux, Python 3.11 or 3.12, Git, and an NVIDIA GPU supported by vLLM**. Check [vLLM's installation requirements](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/) for GPU and driver compatibility. The checkpoint is downloaded from Hugging Face when the server first starts, so allow time and disk space for that download.
+The walkthrough uses **Linux, Python 3.11 or 3.12, Git, and an NVIDIA GPU supported by vLLM**. Check [vLLM's installation requirements](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/) for GPU and driver compatibility. vLLM automatically downloads the checkpoint from Hugging Face when the server first starts and reuses the local cache on later runs. Allow time and disk space for the first download.
 
 A terminal is a window where you paste commands and press Enter. Run the following steps in order. Keep terminal 1 open while using terminal 2, on the **same machine**.
 
@@ -172,7 +172,6 @@ Use a separate output directory per model and per experiment. `--resume` continu
 | Path | Role |
 | --- | --- |
 | `run_eval.py` | Reads benchmark JSONL files, sends model requests, and writes predictions. |
-| `reproduce_transition_gap.py` | Recomputes the published Transition gap reduction from `leaderboard/leaderboard.csv` using Python alone. |
 | `requirements-client.txt` | Dependencies for evaluating an existing model server. |
 | `requirements.txt` | Client dependencies plus local vLLM model serving. |
 | `reparse_predictions.py` | Re-runs tool-call parsing on saved predictions. |
