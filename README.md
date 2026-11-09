@@ -27,9 +27,12 @@ This runs the released checkpoint on **three clean tasks and their three typo va
 | Your computer | How to run |
 | --- | --- |
 | CPU only, including an Intel Mac | Direct inference with `--device cpu`; no GPU or model server needed. |
-| Apple Silicon Mac | Use `--device auto` to select MPS when available, or `--device cpu`. |
-| NVIDIA GPU machine | Use `--device auto` for direct CUDA inference, or the [vLLM guide](scripts/README.md). |
+| Apple Silicon Mac | Use its built-in GPU through **MPS** with `--device auto`, when macOS and the installed PyTorch support it. No NVIDIA GPU or CUDA is needed. |
+| Windows/Linux with an NVIDIA GPU | Use **CUDA** with `--device auto`. Install a compatible NVIDIA driver and CUDA-enabled PyTorch using the [official installation selector](https://pytorch.org/get-started/locally/). The [vLLM guide](scripts/README.md) is another option on supported Linux machines. |
+| Windows with an Intel or AMD GPU | The current runner has no dedicated adapter for these GPU backends. Use `--device cpu` for this workflow. |
 | Laptop connected to an existing model server | Install only the [evaluation client](scripts/README.md#if-you-already-have-a-model-server). The server does the model inference. |
+
+A supported GPU can make **model generation faster than CPU inference**. The speedup depends on the GPU, available memory, and input/output lengths; it has not been measured for these checkpoints yet. Rule-based scoring runs on CPU, and choosing a GPU does not speed up the initial download.
 
 The HF weights are about **13.6 GB per checkpoint**. CPU inference uses float32 and needs additional RAM beyond the weights; **32 GB RAM is a practical starting recommendation, not a measured minimum**. Accelerator inference uses half precision. Download speed and inference time depend on your computer. See [validation status](docs/REPRODUCIBILITY.md) for what has been tested.
 
@@ -57,24 +60,32 @@ On Windows, use `.\.venv\Scripts\python.exe` instead of `python` in the commands
 ### 2. Check your environment
 
 ```bash
-python scripts/evaluate_checkpoint.py --device cpu --check
+python scripts/evaluate_checkpoint.py --device auto --check
 ```
 
-This prints your platform, selected device, and package versions without downloading weights. If you want to use an accelerator, replace `cpu` with `auto`.
+This prints your platform, selected device, available system RAM, and package versions **without downloading weights**. Read the `Device:` line:
+
+| Output | Device used for model generation |
+| --- | --- |
+| `Device: mps` | The Mac GPU through Apple MPS. |
+| `Device: cuda` | The NVIDIA GPU through CUDA. |
+| `Device: cpu` | The CPU; no supported accelerator was detected. |
+
+`auto` tries CUDA first, then MPS, then CPU. If you expected CUDA but see `cpu`, check that your NVIDIA driver and CUDA-enabled PyTorch are installed. On Mac, check MPS availability with your macOS/PyTorch versions. To explicitly select a device, replace `auto` with `cpu`, `mps`, or `cuda`; an unavailable explicit device produces an error.
 
 ### 3. Run Full or Mixed
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint full --device cpu
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto
 ```
 
 For Mixed, run:
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint mixed --device cpu
+python scripts/evaluate_checkpoint.py --checkpoint mixed --device auto
 ```
 
-Both commands automatically load the matching HF tokenizer and checkpoint, generate predictions using the benchmark's prompts and parsers, and run the existing scorer. The data comes with the repository. After the first download, HF normally reuses its local cache. Use `--device auto` to select CUDA, Apple MPS, or CPU automatically.
+Both commands automatically load the matching HF tokenizer and checkpoint, generate predictions using the benchmark's prompts and parsers, and run the existing scorer. The data comes with the repository. After the first download, HF normally reuses its local cache. These commands use the device selected by the check above. To force CPU inference, replace `--device auto` with `--device cpu`.
 
 ### 4. Read the results
 

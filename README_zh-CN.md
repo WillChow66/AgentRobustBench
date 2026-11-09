@@ -29,9 +29,12 @@ AgentRobustBench 评测语言智能体在实际部署变化下能否正确使用
 | 你的电脑 | 运行方式 |
 | --- | --- |
 | 只有 CPU，包括 Intel Mac | 使用 `--device cpu`，不需要 GPU 或 vLLM 服务。 |
-| Apple 芯片的 Mac | 使用 `--device auto`，有可用的 MPS 时会使用 Apple GPU；也可以指定 `--device cpu`。 |
-| 有 NVIDIA GPU 的机器 | 使用 `--device auto` 直接推理，或使用 [vLLM 服务方式](scripts/README.md)。 |
+| Apple 芯片的 Mac | macOS 和 PyTorch 支持时，通过 **MPS** 使用电脑自带的 Apple GPU，运行时选择 `--device auto`。不需要 NVIDIA 显卡或 CUDA。 |
+| Windows / Linux，配有 NVIDIA 显卡 | 通过 **CUDA** 使用 GPU，运行时选择 `--device auto`。需要匹配的 NVIDIA 驱动和 CUDA 版 PyTorch，安装方式见[官方安装选择器](https://pytorch.org/get-started/locally/)。支持的 Linux 机器也可使用 [vLLM 服务方式](scripts/README.md)。 |
+| Windows，配有 Intel / AMD 显卡 | 当前入口没有专门适配这些 GPU 后端，本流程使用 `--device cpu`。 |
 | 连接另一台模型服务器的电脑 | 只安装[评测客户端](scripts/README.md#if-you-already-have-a-model-server)，由服务器运行模型。 |
+
+可用的 GPU 通常能加快**模型生成预测**的过程。具体提升取决于 GPU、可用内存或显存，以及输入输出长度；这两个 checkpoint 的实际提速尚未测量。规则评分在 CPU 上完成，首次下载模型的速度也不会因为使用 GPU 而提升。
 
 两个 HF checkpoint 的权重文件**各约 13.6 GB**。CPU 推理使用 float32，除权重外还需要额外运行内存；**建议从 32 GB 内存的机器开始尝试，这不是实测最低配置**。使用加速器时会选择半精度。首次下载及推理耗时取决于机器和网络，已验证的范围见[复现说明](docs/REPRODUCIBILITY.md)。
 
@@ -59,26 +62,34 @@ Windows 中，以下命令的 `python` 都换成 `.\.venv\Scripts\python.exe`。
 ### 第二步：检查环境
 
 ```bash
-python scripts/evaluate_checkpoint.py --device cpu --check
+python scripts/evaluate_checkpoint.py --device auto --check
 ```
 
-这会显示电脑类型、所选设备和依赖版本，**不会下载模型**。如果希望使用 GPU，将 `cpu` 换成 `auto`，脚本会检查可用的 CUDA 或 Apple MPS。
+这会显示电脑类型、所选设备、可用系统内存和依赖版本，**不会下载模型**。查看输出中的 `Device:`：
+
+| 输出 | 模型推理使用的设备 |
+| --- | --- |
+| `Device: mps` | 通过 Apple MPS 使用 Mac 的 GPU。 |
+| `Device: cuda` | 通过 CUDA 使用 NVIDIA GPU。 |
+| `Device: cpu` | 使用 CPU，未检测到可用且受支持的加速设备。 |
+
+`auto` 按 CUDA → MPS → CPU 的顺序选择。如果 Windows / Linux 有 NVIDIA 显卡却显示 `cpu`，请检查 NVIDIA 驱动和 CUDA 版 PyTorch。Mac 则需要检查当前 macOS 与 PyTorch 是否支持 MPS。也可以将 `auto` 明确改成 `cpu`、`mps` 或 `cuda`；如果指定设备不可用，脚本会报错提示。
 
 ### 第三步：运行 Full 或 Mixed
 
 运行 Full：
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint full --device cpu
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto
 ```
 
 运行 Mixed：
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint mixed --device cpu
+python scripts/evaluate_checkpoint.py --checkpoint mixed --device auto
 ```
 
-脚本会自动加载对应的 HF tokenizer 和 checkpoint，使用基准原有的提示词与解析器生成预测，再调用原有评分器。评测数据已经随仓库提供，无需另外下载。首次下载后通常会复用 HF 本地缓存。如果希望自动选择 CUDA、Apple MPS 或 CPU，将 `--device cpu` 改成 `--device auto`。
+脚本会自动加载对应的 HF tokenizer 和 checkpoint，使用基准原有的提示词与解析器生成预测，再调用原有评分器。评测数据已经随仓库提供，无需另外下载。首次下载后通常会复用 HF 本地缓存。以上命令会使用检查步骤选出的设备。如果只想使用 CPU，将 `--device auto` 改成 `--device cpu`。
 
 ### 第四步：查看结果
 
