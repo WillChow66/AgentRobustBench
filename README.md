@@ -36,26 +36,47 @@ A supported GPU can make **model generation faster than CPU inference**. The spe
 
 The HF weights are about **13.6 GB per checkpoint**. CPU inference uses float32 and needs additional RAM beyond the weights; **32 GB RAM is a practical starting recommendation, not a measured minimum**. Accelerator inference uses half precision. Download speed and inference time depend on your computer. See [validation status](docs/REPRODUCIBILITY.md) for what has been tested.
 
-### 1. Install
+### 1. Install Python and the project dependencies
 
-Install [Python 3.11 or 3.12](https://www.python.org/downloads/) and [Git](https://git-scm.com/downloads). Open Terminal on macOS/Linux or PowerShell on Windows. Download the project, then create a separate environment:
+For a new setup, use **Conda** to install Python and create an isolated environment.
+
+**Install Conda if needed.** Run `conda --version`. If the command is not found, install [Miniforge using its official instructions](https://github.com/conda-forge/miniforge#install). Choose the installer for your operating system and processor. On macOS/Linux, reopen Terminal after installation; on Windows, open **Miniforge Prompt** from the Start menu. An existing Anaconda, Miniconda, or Miniforge installation also works.
+
+**Use one Conda environment for this workflow.** Activate it with `conda activate`; the commands below do not create an additional `.venv`. On Windows, use Miniforge Prompt or a PowerShell session where Conda already works.
+
+**Install Python 3.12, pip, and Git in a new environment:**
+
+```bash
+conda create -n agentrobustbench -c conda-forge --override-channels python=3.12 pip git -y
+conda activate agentrobustbench
+python --version
+git --version
+```
+
+The create command installs Python itself; a separate system Python installation is not required. Keep this environment active for all following commands. If you already have a working Python 3.11/3.12 `.venv` from the earlier instructions, keep using it and continue below.
+
+**Download the project:**
 
 ```bash
 git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
 cd AgentRobustBench
-python3 -m venv .venv
-source .venv/bin/activate
+```
+
+If you already have the project, open its directory and run `git pull` instead of cloning again.
+
+**Install the dependencies.** On macOS, proceed directly to the requirements command below. On CPU-only Linux/Windows, first install CPU PyTorch:
+
+```bash
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+On Linux/Windows with an NVIDIA GPU, first install CUDA-enabled PyTorch using the [official installation selector](https://pytorch.org/get-started/locally/). Then, on every platform, install the project dependencies:
+
+```bash
 python -m pip install -r scripts/requirements-local.txt
 ```
 
-Already have the repository? Open its directory and skip the clone. On Windows, replace the last three commands with:
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r scripts/requirements-local.txt
-```
-
-On Windows, use `.\.venv\Scripts\python.exe` instead of `python` in the commands below. For a CPU-only Linux/Windows installation, install the CPU build of PyTorch before the requirements: `python -m pip install torch --index-url https://download.pytorch.org/whl/cpu`. macOS uses the normal installation above.
+This also installs the Hugging Face `hf` command used for checkpoint downloads below.
 
 ### 2. Check your environment
 
@@ -73,7 +94,25 @@ This prints your platform, selected device, available system RAM, and package ve
 
 `auto` tries CUDA first, then MPS, then CPU. If you expected CUDA but see `cpu`, check that your NVIDIA driver and CUDA-enabled PyTorch are installed. On Mac, check MPS availability with your macOS/PyTorch versions. To explicitly select a device, replace `auto` with `cpu`, `mps`, or `cuda`; an unavailable explicit device produces an error.
 
-### 3. Evaluate Full or Mixed on the complete benchmark
+### 3. Download Full or Mixed
+
+Download the checkpoint you want to evaluate. To evaluate both models, run both download commands.
+
+**Full:**
+
+```bash
+hf download willchow66/ToolRL-DR-Full-Qwen2.5-3B --revision caf3c8dfd3f9914d056892c3ab740d35ee9a0eab
+```
+
+**Mixed:**
+
+```bash
+hf download willchow66/ToolRL-DR-Mixed-Qwen2.5-3B --revision c93ea7730b10cb0c16025705f2753859ec639a5e
+```
+
+The revisions match [the evaluator's checkpoint configuration](configs/checkpoints.json). Each command prints the local cache path when finished. **If the same files and revision are already cached, they are reused; missing files are downloaded.** You do not need to copy the weights into the project folder or pass their cache path to the evaluator. The repositories are public and do not require login for downloads.
+
+### 4. Evaluate Full or Mixed on the complete benchmark
 
 ```bash
 python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
@@ -85,9 +124,9 @@ For Mixed, run:
 python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
 ```
 
-Both commands automatically load the matching HF tokenizer and checkpoint, generate predictions using the benchmark's prompts and parsers, and run the existing scorer. The data comes with the repository. After the first download, HF normally reuses its local cache. These commands use the device selected by the check above. To force CPU inference, replace `--device auto` with `--device cpu`.
+Both commands load the tokenizer and checkpoint from the HF cache prepared in step 3, generate predictions using the benchmark's prompts and parsers, and run the existing scorer. If you skipped the download step, evaluation downloads the missing files automatically. The benchmark data comes with the repository. These commands use the device selected by the check above. To force CPU inference, replace `--device auto` with `--device cpu`.
 
-### 4. Read the results
+### 5. Read the results
 
 A completed run prints **`n=3721`** and the path to a new output directory under `results/`. Full and Mixed runs save their results separately.
 
