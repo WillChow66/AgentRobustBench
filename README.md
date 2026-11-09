@@ -14,7 +14,7 @@ NeurIPS 2026 · Evaluations & Datasets Track
 
 **199 seed tasks · 22 perturbation types · 3,721 evaluation cases · 21 models evaluated**
 
-[Run the checkpoint](#run-six-examples) · [Benchmark](#benchmark) · [Results](#results) · [Full evaluation](#quick-start) · [Checkpoints](#model-checkpoints) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
+[Run the checkpoint](#run-six-examples) · [Benchmark](#benchmark) · [Results](#results) · [Full evaluation](docs/REPRODUCIBILITY.md) · [Checkpoints](#model-checkpoints) · [Training](#reproducing-toolrl-dr-optional) · [Citation](#citation)
 
 </div>
 
@@ -22,94 +22,80 @@ AgentRobustBench measures how tool-use language agents handle failures that aris
 
 ## Run six examples
 
-The walkthrough uses **Linux, Python 3.11 or 3.12, Git, and an NVIDIA GPU supported by vLLM**. Check [vLLM's installation requirements](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/) for GPU and driver compatibility. vLLM automatically downloads the checkpoint from Hugging Face when the server first starts and reuses the local cache on later runs. Allow time and disk space for the first download.
+This runs the released checkpoint on **three clean tasks and their three typo variants**, then scores the generated tool calls. Choose where the model will run:
 
-A terminal is a window where you paste commands and press Enter. Run the following steps in order. Keep terminal 1 open while using terminal 2, on the **same machine**.
+| Your computer | How to run |
+| --- | --- |
+| CPU only, including an Intel Mac | Direct inference with `--device cpu`; no GPU or model server needed. |
+| Apple Silicon Mac | Use `--device auto` to select MPS when available, or `--device cpu`. |
+| NVIDIA GPU machine | Use `--device auto` for direct CUDA inference, or the [vLLM guide](scripts/README.md). |
+| Laptop connected to an existing model server | Install only the [evaluation client](scripts/README.md#if-you-already-have-a-model-server). The server does the model inference. |
 
-### 1. Download the project and install the environment
+The HF weights are about **13.6 GB per checkpoint**. CPU inference uses float32 and needs additional RAM beyond the weights; **32 GB RAM is a practical starting recommendation, not a measured minimum**. Accelerator inference uses half precision. Download speed and inference time depend on your computer. See [validation status](docs/REPRODUCIBILITY.md) for what has been tested.
 
-In **terminal 1**, check your tools:
+### 1. Install
 
-```bash
-python3 --version
-git --version
-nvidia-smi
-```
-
-`python3` should report Python 3.11 or 3.12, and `nvidia-smi` should list your GPU. If a command is missing, install that tool or use a configured GPU machine before continuing.
-
-Download into your home directory, create a separate Python environment, and install the dependencies:
+Install [Python 3.11 or 3.12](https://www.python.org/downloads/) and [Git](https://git-scm.com/downloads). Open Terminal on macOS/Linux or PowerShell on Windows. Download the project, then create a separate environment:
 
 ```bash
-git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git ~/AgentRobustBench
-cd ~/AgentRobustBench
+git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
+cd AgentRobustBench
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r scripts/requirements.txt
+python -m pip install -r scripts/requirements-local.txt
 ```
 
-If you already downloaded the project, open that directory and start at `python3 -m venv .venv`. The evaluation data is included in the repository. No separate dataset download is needed.
+Already have the repository? Open its directory and skip the clone. On Windows, replace the last three commands with:
 
-### 2. Start the model server
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r scripts/requirements-local.txt
+```
 
-Still in **terminal 1**, run:
+On Windows, use `.\.venv\Scripts\python.exe` instead of `python` in the commands below. For a CPU-only Linux/Windows installation, install the CPU build of PyTorch before the requirements: `python -m pip install torch --index-url https://download.pytorch.org/whl/cpu`. macOS uses the normal installation above.
+
+### 2. Check your environment
 
 ```bash
-vllm serve willchow66/ToolRL-DR-Full-Qwen2.5-3B --port 8000 --max-model-len 8192
+python scripts/evaluate_checkpoint.py --device cpu --check
 ```
 
-vLLM loads the model and waits for evaluation requests. Leave it running. When startup completes, open **terminal 2** on the same machine and run:
+This prints your platform, selected device, and package versions without downloading weights. If you want to use an accelerator, replace `cpu` with `auto`.
+
+### 3. Run Full or Mixed
 
 ```bash
-cd ~/AgentRobustBench
-source .venv/bin/activate
-python -c "import json, urllib.request; print(json.load(urllib.request.urlopen('http://localhost:8000/v1/models'))['data'][0]['id'])"
+python scripts/evaluate_checkpoint.py --checkpoint full --device cpu
 ```
 
-The last command should print `willchow66/ToolRL-DR-Full-Qwen2.5-3B`. If you see a connection error, check terminal 1 and wait for the server to finish starting.
-
-### 3. Generate six predictions
-
-In **terminal 2**, paste this entire command block:
+For Mixed, run:
 
 ```bash
-python scripts/run_eval.py \
-    --model-name willchow66/ToolRL-DR-Full-Qwen2.5-3B \
-    --endpoint http://localhost:8000/v1 \
-    --data-dir hf_data/datasets/api_eval \
-    --files clean.jsonl realistic_typos.jsonl \
-    --limit 3 --temperature 0 --max-workers 1 \
-    --output-dir results/quick-demo
+python scripts/evaluate_checkpoint.py --checkpoint mixed --device cpu
 ```
 
-This runs three clean examples and their three typo variants. The runner summary should show `processed=3` and `errors=0` for each file. It saves:
+Both commands automatically load the matching HF tokenizer and checkpoint, generate predictions using the benchmark's prompts and parsers, and run the existing scorer. The data comes with the repository. After the first download, HF normally reuses its local cache. Use `--device auto` to select CUDA, Apple MPS, or CPU automatically.
 
-```text
-results/quick-demo/
-  clean.predictions.jsonl
-  realistic_typos.predictions.jsonl
-  _run_summary.json
-```
+### 4. Read the results
 
-Each predictions file contains one JSON record per example, including the model's output. If `errors` is nonzero, inspect the `error` field in those files and the server log before scoring.
+The scorer prints **`n=6`** and the accuracy measured from your model outputs. The last line prints a new directory under `results/` containing:
 
-### 4. Score and inspect the results
+| File | Contents |
+| --- | --- |
+| `clean.predictions.jsonl`, `realistic_typos.predictions.jsonl` | Generated text and parsed tool calls. |
+| `scores.json` | Aggregate accuracy. |
+| `per_sample_scores.jsonl` | Score for each example. |
+| `_run_summary.json` | Processed counts and errors. |
+| `run_metadata.json` | Checkpoint revision, data hashes, device, precision, package versions, seed, and measured load/evaluation times. |
 
-Still in **terminal 2**, run:
+The six-example run checks the evaluation workflow. To run every case and compare newly measured scores with the released scores:
 
 ```bash
-python leaderboard/scoring/eval_results.py \
-    --predictions results/quick-demo \
-    --output results/quick-demo/scores.json \
-    --per-sample-output results/quick-demo/per_sample_scores.jsonl
+python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
+python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
 ```
 
-The console summary should start with `n=6`. It also reports accuracy by benchmark and perturbation category. Open `results/quick-demo/scores.json` for aggregate scores and `per_sample_scores.jsonl` to inspect each example. These six examples check the workflow; use the full benchmark below for a paper-scale comparison. Scoring uses no model judge or external API.
-
-To try ToolRL-DR-Mixed, replace the model ID in both terminals with `willchow66/ToolRL-DR-Mixed-Qwen2.5-3B` and use a new output directory such as `results/quick-demo-mixed`.
-
-For a client on another computer, follow the [client-only setup](scripts/README.md#if-you-already-have-a-model-server). For all evaluation cases, continue to [full benchmark evaluation](scripts/README.md#full-benchmark-evaluation).
+A complete run scores **3,721 cases** and also writes `comparison.csv` with measured scores, released scores, and differences in percentage points. See [reproduction details](docs/REPRODUCIBILITY.md) and [the vLLM guide](scripts/README.md) for other serving setups.
 
 ## Benchmark
 
@@ -134,8 +120,8 @@ The plot shows how much clean accuracy models retain across Observation, Action,
 
 | Directory | Contents |
 |-----------|----------|
-| `hf_data/datasets/api_eval/` | 17 JSONL files: 16 static perturbation cells + the clean baseline (3{,}721 predictions per model in total). The 6 Transition variants are produced at runtime by `scripts/run_eval.py`, not stored as separate files. |
-| `scripts/` | Inference runner (`run_eval.py`), reparser (`reparse_predictions.py`), model manifest, and SLURM templates. See `scripts/README.md`. |
+| `hf_data/datasets/api_eval/` | 17 JSONL files: 16 static perturbation cells + the clean baseline (3,721 predictions per model in total). The 6 Transition variants are produced at runtime by `scripts/run_eval.py`, not stored as separate files. |
+| `scripts/` | Direct checkpoint runner (`evaluate_checkpoint.py`), endpoint runner (`run_eval.py`), reparser (`reparse_predictions.py`), model manifest, and SLURM templates. See `scripts/README.md`. |
 | `leaderboard/` | HuggingFace Space implementation: Gradio app, deterministic scorer, leaderboard CSV. See `leaderboard/README.md`. |
 | `training/` | Reproduction recipe for ToolRL-DR-Full and ToolRL-DR-Mixed: the parquets actually fed to the GRPO trainer (`train.parquet`, `mixed_train.parquet`, `test.parquet`), the reference jsonl→parquet converter, our drop-in reward-score patch (`rlla_perturbed.py`), the GRPO launcher, and a hyperparameter manifest. See `training/README.md`. |
 
@@ -148,7 +134,7 @@ The plot shows how much clean accuracy models retain across Observation, Action,
 
 The checkpoints are based on Qwen2.5-3B-Instruct and use the [Qwen Research License](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/blob/main/LICENSE). See [training/](training/) for the training data and reproduction instructions.
 
-## Quick start
+## Full evaluation with a model server
 
 Start with [six examples](scripts/README.md#run-six-examples), then follow [full benchmark evaluation](scripts/README.md#full-benchmark-evaluation) to run all static splits and the six runtime perturbations. The guide includes the install commands, model-server check, inference commands, scoring command, and output locations.
 
@@ -193,4 +179,4 @@ The current arXiv record lists the paper under its original title.
 
 ## License
 
-Code: Apache-2.0. Data: see per-source license documented in the paper.
+Code: [Apache-2.0](LICENSE). Data: see per-source license documented in the paper.

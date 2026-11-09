@@ -13,8 +13,8 @@ here) by `convert_to_toolrl_parquet.py`, which is included as reference.
 
 | Path | Role |
 |------|------|
-| `data/train.parquet` | **DR-Full** training input. 3{,}826 perturbed samples in ToolRL parquet schema (`data_source`, `prompt`, `reward_model`, `extra_info`). Each `prompt` is a list of `{role, content}` messages; each `reward_model.ground_truth` is the ToolRL-format `<think>...</think>\n<tool_call>...</tool_call>` reference output. |
-| `data/mixed_train.parquet` | **DR-Mixed** training input. 4{,}000 samples (~50/50 clean / perturbed). Same schema. |
+| `data/train.parquet` | **DR-Full** training input. 3,826 perturbed samples in ToolRL parquet schema (`data_source`, `prompt`, `reward_model`, `extra_info`). Each `prompt` is a list of `{role, content}` messages; each `reward_model.ground_truth` is the ToolRL-format `<think>...</think>\n<tool_call>...</tool_call>` reference output. |
+| `data/mixed_train.parquet` | **DR-Mixed** training input. 4,000 samples (~50/50 clean / perturbed). Same schema. |
 | `data/test.parquet` | 79-sample validation split used during training (referenced by `data.val_files` in the GRPO launcher; trainer evaluates on it every 5 epochs). |
 | `convert_to_toolrl_parquet.py` | Reference script that converts source JSONLs in our schema into the ToolRL parquet schema above. The shipped parquets were produced by this script; reviewers do **not** need to rerun it (the JSONL sources are not in this release). |
 | `rlla_perturbed.py` | Reward-function file. **Drop-in replacement** for `verl/utils/reward_score/rlla.py` in the public ToolRL/veRL repo. The only behavioral change vs. upstream is that response-only samples receive a non-zero correctness signal instead of a flat 0.0. |
@@ -23,8 +23,8 @@ here) by `convert_to_toolrl_parquet.py`, which is included as reference.
 
 ## Published checkpoints
 
-- [ToolRL-DR-Full, step 150](https://huggingface.co/willchow66/ToolRL-DR-Full-Qwen2.5-3B)
-- [ToolRL-DR-Mixed, step 155](https://huggingface.co/willchow66/ToolRL-DR-Mixed-Qwen2.5-3B)
+- [ToolRL-DR-Full](https://huggingface.co/willchow66/ToolRL-DR-Full-Qwen2.5-3B)
+- [ToolRL-DR-Mixed](https://huggingface.co/willchow66/ToolRL-DR-Mixed-Qwen2.5-3B)
 
 ## Reproducing a checkpoint
 
@@ -32,19 +32,17 @@ The pipeline is **two steps after a one-time setup**.
 
 ### Setup (once)
 
+The reference implementation is [qiancheng0/ToolRL](https://github.com/qiancheng0/ToolRL). Use a separate training environment following its [installation instructions at this reference checkout](https://github.com/qiancheng0/ToolRL/blob/8cee13ec0ca72f0461da372a93a6fd8140dbb840/README.md#-installation); it uses an older vLLM stack than the evaluation environment.
+
 ```bash
-# 1. Clone the public ToolRL repo (the one cited as ToolRL in the paper).
-#    Follow its own README to install dependencies (vllm, ray, hydra-core,
-#    transformers, torch, ...).
-git clone <public-toolrl-url> /path/to/toolrl
-cd /path/to/toolrl && pip install -r requirements.txt
-
-# 2. Drop in our modified reward-score file (the only ToolRL-side change).
-cp <this-repo>/training/rlla_perturbed.py \
-   /path/to/toolrl/verl/utils/reward_score/rlla.py
-
-# 3. Make verl importable for our launcher:
-export PYTHONPATH="/path/to/toolrl:${PYTHONPATH}"
+git clone https://github.com/qiancheng0/ToolRL.git ~/ToolRL
+cd ~/ToolRL
+git checkout 8cee13ec0ca72f0461da372a93a6fd8140dbb840
+# Complete the upstream environment installation linked above, then:
+python -m pip install -e .
+cd ~/AgentRobustBench
+cp training/rlla_perturbed.py ~/ToolRL/verl/utils/reward_score/rlla.py
+export PYTHONPATH="$HOME/ToolRL:${PYTHONPATH}"
 ```
 
 ### Launch — DR-Full

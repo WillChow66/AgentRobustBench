@@ -1417,7 +1417,7 @@ def main():
                         help="Model identifier as registered on the vLLM server.")
     parser.add_argument("--endpoint", default="http://localhost:8000/v1",
                         help="vLLM OpenAI-compatible endpoint.")
-    parser.add_argument("--api-key", default="EMPTY",
+    parser.add_argument("--api-key", default=os.environ.get("AGENTROBUSTBENCH_API_KEY", "EMPTY"),
                         help="API key placeholder for the OpenAI SDK; local "
                              "vLLM does not verify it. No real key needed.")
     parser.add_argument(
@@ -1578,6 +1578,11 @@ def main():
                     "elapsed_sec": elapsed}, indent=2),
         encoding="utf-8",
     )
+
+    if any(row["errors"] for row in summary):
+        print("ERROR: model requests failed. Inspect the prediction error fields before scoring.",
+              file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

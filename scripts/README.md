@@ -2,9 +2,9 @@
 
 [Project home](../README.md) · [中文入门指南](../README_zh-CN.md)
 
-This guide shows how to load the released Hugging Face checkpoint, generate predictions on benchmark examples, and score the outputs.
+For direct CPU, Apple MPS, or CUDA inference without a model server, start with the [project quick start](../README.md#run-six-examples). This page describes the optional vLLM server/client workflow.
 
-## Run six examples
+## Run six examples with vLLM
 
 The walkthrough uses **Linux, Python 3.11 or 3.12, Git, and an NVIDIA GPU supported by vLLM**. Check [vLLM's installation requirements](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/) for GPU and driver compatibility. vLLM automatically downloads the checkpoint from Hugging Face when the server first starts and reuses the local cache on later runs. Allow time and disk space for the first download.
 
@@ -171,6 +171,8 @@ Use a separate output directory per model and per experiment. `--resume` continu
 
 | Path | Role |
 | --- | --- |
+| `evaluate_checkpoint.py` | Directly loads Full/Mixed on CPU, MPS, or CUDA and scores the generated predictions. |
+| `requirements-local.txt` | Dependencies for direct checkpoint inference. |
 | `run_eval.py` | Reads benchmark JSONL files, sends model requests, and writes predictions. |
 | `requirements-client.txt` | Dependencies for evaluating an existing model server. |
 | `requirements.txt` | Client dependencies plus local vLLM model serving. |

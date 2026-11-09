@@ -11,3 +11,9 @@ __pycache__/
 *.log
 *.out
 results/
+.env
+.env.*
+!.env.example
+*.egg-info/
+build/
+dist/

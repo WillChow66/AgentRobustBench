@@ -1,0 +1,6 @@
+# Direct checkpoint inference on CPU, Apple Silicon (MPS), or CUDA.
+-r requirements-client.txt
+torch>=2.6,<3
+transformers>=4.46,<5
+accelerate>=1,<2
+psutil>=5

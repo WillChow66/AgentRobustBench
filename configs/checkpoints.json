@@ -1,0 +1,12 @@
+{
+  "full": {
+    "model_id": "willchow66/ToolRL-DR-Full-Qwen2.5-3B",
+    "revision": "caf3c8dfd3f9914d056892c3ab740d35ee9a0eab",
+    "leaderboard_name": "ToolRL-DR-Full (ours)"
+  },
+  "mixed": {
+    "model_id": "willchow66/ToolRL-DR-Mixed-Qwen2.5-3B",
+    "revision": "c93ea7730b10cb0c16025705f2753859ec639a5e",
+    "leaderboard_name": "ToolRL-DR-Mixed (ours)"
+  }
+}

@@ -24,115 +24,82 @@ AgentRobustBench 评测语言智能体在实际部署变化下能否正确使用
 
 ## 运行六个模型评测样本
 
-这一步会实际运行模型，生成三个干净样本和三个错别字样本的预测，然后进行评分。下面的本地部署示例使用 **Linux、Python 3.11 或 3.12、Git，以及 vLLM 支持的 NVIDIA GPU**。请先查看 [vLLM 的硬件与驱动要求](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/)。首次安装依赖和下载模型需要额外时间。
+这一步会加载你选择的 checkpoint，对**三个干净任务及其三个错别字版本**生成预测，再进行评分。先按自己的电脑选择运行方式：
 
-终端就是输入命令并按回车执行的窗口。下面会使用**同一台机器上的两个终端**：终端 1 运行模型服务，终端 2 发送评测请求并评分。
+| 你的电脑 | 运行方式 |
+| --- | --- |
+| 只有 CPU，包括 Intel Mac | 使用 `--device cpu`，不需要 GPU 或 vLLM 服务。 |
+| Apple 芯片的 Mac | 使用 `--device auto`，有可用的 MPS 时会使用 Apple GPU；也可以指定 `--device cpu`。 |
+| 有 NVIDIA GPU 的机器 | 使用 `--device auto` 直接推理，或使用 [vLLM 服务方式](scripts/README.md)。 |
+| 连接另一台模型服务器的电脑 | 只安装[评测客户端](scripts/README.md#if-you-already-have-a-model-server)，由服务器运行模型。 |
 
-### 第一步：下载项目并安装环境
+两个 HF checkpoint 的权重文件**各约 13.6 GB**。CPU 推理使用 float32，除权重外还需要额外运行内存；**建议从 32 GB 内存的机器开始尝试，这不是实测最低配置**。使用加速器时会选择半精度。首次下载及推理耗时取决于机器和网络，已验证的范围见[复现说明](docs/REPRODUCIBILITY.md)。
 
-在**终端 1** 中检查工具：
+### 第一步：安装环境
 
-```bash
-python3 --version
-git --version
-nvidia-smi
-```
-
-Python 应显示 3.11 或 3.12，`nvidia-smi` 应列出 GPU。如果找不到某条命令，请先安装相应工具，或使用已经配置好的 GPU 机器。
-
-将仓库下载到用户主目录，建立独立的 Python 环境，并安装依赖：
+需要 [Python 3.11 或 3.12](https://www.python.org/downloads/) 和 [Git](https://git-scm.com/downloads)。Mac / Linux 打开终端，Windows 打开 PowerShell。下载项目并建立独立环境：
 
 ```bash
-git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git ~/AgentRobustBench
-cd ~/AgentRobustBench
+git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
+cd AgentRobustBench
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r scripts/requirements.txt
+python -m pip install -r scripts/requirements-local.txt
 ```
 
-如果已经下载过项目，直接进入已有的项目目录，从 `python3 -m venv .venv` 开始。评测数据已随仓库提供，无需另外去 Hugging Face 下载。
-
-### 第二步：启动模型服务
-
-在**终端 1** 中运行：
-
-```bash
-vllm serve willchow66/ToolRL-DR-Full-Qwen2.5-3B --port 8000 --max-model-len 8192
-```
-
-vLLM 会自动从 Hugging Face 下载并加载模型，然后等待评测请求。后续运行通常会复用本地缓存。请保持这个终端运行。在服务启动完成后，打开**同一台机器上的终端 2**：
-
-```bash
-cd ~/AgentRobustBench
-source .venv/bin/activate
-python -c "import json, urllib.request; print(json.load(urllib.request.urlopen('http://localhost:8000/v1/models'))['data'][0]['id'])"
-```
-
-最后一行应打印 `willchow66/ToolRL-DR-Full-Qwen2.5-3B`。如果出现连接错误，先检查终端 1，等待模型服务启动完成。
-
-### 第三步：生成六个样本的预测
-
-在**终端 2** 中整段粘贴：
-
-```bash
-python scripts/run_eval.py \
-    --model-name willchow66/ToolRL-DR-Full-Qwen2.5-3B \
-    --endpoint http://localhost:8000/v1 \
-    --data-dir hf_data/datasets/api_eval \
-    --files clean.jsonl realistic_typos.jsonl \
-    --limit 3 --temperature 0 --max-workers 1 \
-    --output-dir results/quick-demo
-```
-
-这会分别运行三个干净样本及其错别字版本。运行结束时，两个文件都应显示 `processed=3` 和 `errors=0`。结果保存到：
-
-```text
-results/quick-demo/
-  clean.predictions.jsonl
-  realistic_typos.predictions.jsonl
-  _run_summary.json
-```
-
-每个预测文件中，一行对应一个样本，包含模型的输出。如果 `errors` 不为零，请先检查预测文件中的 `error` 字段和模型服务日志。
-
-### 第四步：评分并查看结果
-
-仍在**终端 2** 中运行：
-
-```bash
-python leaderboard/scoring/eval_results.py \
-    --predictions results/quick-demo \
-    --output results/quick-demo/scores.json \
-    --per-sample-output results/quick-demo/per_sample_scores.jsonl
-```
-
-控制台应打印 `n=6`，表示已对六个样本评分，同时显示准确率。`scores.json` 保存汇总结果，`per_sample_scores.jsonl` 保存每个样本的评分。这六个样本用于跑通流程；与论文进行完整比较时，请继续运行下方的完整评测。评分使用确定性规则，无需另一个模型充当裁判。
-
-如果想试 ToolRL-DR-Mixed，将两个终端中的模型 ID 都换成 `willchow66/ToolRL-DR-Mixed-Qwen2.5-3B`，并使用新的输出目录，例如 `results/quick-demo-mixed`。
-
-### 如果已有模型服务：只安装评测客户端
-
-如果模型服务已经在另一台机器上运行，Mac 或 Windows 电脑也可以发送评测请求。安装 Python 3.11 或 3.12 和 Git、下载仓库后，在项目目录中建立客户端环境。
-
-Mac / Linux：
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r scripts/requirements-client.txt
-```
-
-Windows PowerShell：
+如果已经下载过仓库，直接进入已有目录，跳过克隆。Windows 用户将上面的最后三行替换为：
 
 ```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r scripts/requirements-client.txt
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r scripts/requirements-local.txt
 ```
 
-Windows 中，将评测命令开头的 `python` 换成 `.\.venv\Scripts\python.exe`，并把每条命令写在同一行，去掉用于换行的行末 `\`。
+Windows 中，以下命令的 `python` 都换成 `.\.venv\Scripts\python.exe`。Linux / Windows 如果只使用 CPU，可以先安装 CPU 版 PyTorch，再安装 requirements：`python -m pip install torch --index-url https://download.pytorch.org/whl/cpu`。Mac 使用上面的普通安装命令即可。
 
-随后执行第三、四步，将 `--endpoint` 改成你能访问的服务地址，以 `/v1` 结尾；将 `--model-name` 改成服务中注册的模型 ID。`localhost` 代表当前执行命令的电脑，只有服务与客户端在同一台机器时才能使用。如果服务器需要认证，通过 `--api-key` 传入对应密钥。本地默认 vLLM 无需 OpenAI 账号或密钥。
+### 第二步：检查环境
+
+```bash
+python scripts/evaluate_checkpoint.py --device cpu --check
+```
+
+这会显示电脑类型、所选设备和依赖版本，**不会下载模型**。如果希望使用 GPU，将 `cpu` 换成 `auto`，脚本会检查可用的 CUDA 或 Apple MPS。
+
+### 第三步：运行 Full 或 Mixed
+
+运行 Full：
+
+```bash
+python scripts/evaluate_checkpoint.py --checkpoint full --device cpu
+```
+
+运行 Mixed：
+
+```bash
+python scripts/evaluate_checkpoint.py --checkpoint mixed --device cpu
+```
+
+脚本会自动加载对应的 HF tokenizer 和 checkpoint，使用基准原有的提示词与解析器生成预测，再调用原有评分器。评测数据已经随仓库提供，无需另外下载。首次下载后通常会复用 HF 本地缓存。如果希望自动选择 CUDA、Apple MPS 或 CPU，将 `--device cpu` 改成 `--device auto`。
+
+### 第四步：查看结果
+
+评分器会打印 **`n=6`**，以及由这次模型预测得到的准确率。最后一行会显示 `results/` 下新建的输出目录，里面包含：
+
+| 文件 | 内容 |
+| --- | --- |
+| `clean.predictions.jsonl`、`realistic_typos.predictions.jsonl` | 模型生成的文本及解析出的工具调用。 |
+| `scores.json` | 汇总准确率。 |
+| `per_sample_scores.jsonl` | 每个样本的评分。 |
+| `_run_summary.json` | 处理数量和错误数量。 |
+| `run_metadata.json` | checkpoint 版本、数据哈希、设备、精度、依赖版本、种子，以及这次运行实测的加载和评测耗时。 |
+
+六样本用于跑通流程。如果要评测所有案例，并将新测得的分数与公开分数比较，运行：
+
+```bash
+python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
+python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
+```
+
+完整评测会评分 **3,721 个案例**，并额外生成 `comparison.csv`，列出实际得分、公开得分及相差多少个百分点。更多参数、验证范围与论文指标对应关系见[复现说明](docs/REPRODUCIBILITY.md)。
 
 ## 基准介绍
 
@@ -173,7 +140,7 @@ Windows 中，将评测命令开头的 `python` 换成 `.\.venv\Scripts\python.e
 
 ## 完整评测
 
-先完成六个样本的流程，再按照[完整评测命令](scripts/README.md#full-benchmark-evaluation)运行所有静态文件和六种运行时扰动，最后对整个输出目录评分。每个模型、每次实验使用独立的输出目录。
+使用上面的 `--suite full` 命令即可运行所有静态文件和六种运行时扰动并评分。若使用独立的模型服务，参考 [vLLM 完整评测命令](scripts/README.md#full-benchmark-evaluation)。
 
 集群用户可以使用 [`scripts/slurm/`](scripts/slurm/) 中的模板。提交作业前，需要替换为自己集群的账户、路径和调度器设置。
 
@@ -212,4 +179,4 @@ bash training/grpo_launch.sh
 
 ## 许可证
 
-代码使用 Apache-2.0。数据的来源许可证见论文和各数据来源的说明。
+代码使用 [Apache-2.0](LICENSE)。数据的来源许可证见论文和各数据来源的说明。
