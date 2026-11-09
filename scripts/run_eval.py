@@ -1422,7 +1422,7 @@ def main():
                              "vLLM does not verify it. No real key needed.")
     parser.add_argument(
         "--data-dir",
-        default="<repo-root>/hf_data/datasets/api_eval",
+        default=Path(__file__).resolve().parents[1] / "hf_data" / "datasets" / "api_eval",
         help="Directory containing the 17 HF api_eval .jsonl files.",
     )
     parser.add_argument("--files", nargs="*", default=None,
@@ -1490,6 +1490,10 @@ def main():
     data_dir = Path(args.data_dir)
     output_dir = Path(args.output_dir)
 
+    if not data_dir.is_dir():
+        parser.error(f"Data directory not found: {data_dir}. "
+                     "Use --data-dir to select the directory containing the JSONL files.")
+
     # Default file selection differs by mode:
     #  - single mode: run everything in data_dir
     #  - transition mode: run on clean.jsonl only (transition is a runtime
@@ -1500,6 +1504,9 @@ def main():
         files = [data_dir / "clean.jsonl"]
     else:
         files = sorted(data_dir.glob("*.jsonl"))
+
+    if not files:
+        parser.error(f"No JSONL files found in {data_dir}.")
 
     missing = [f for f in files if not f.exists()]
     if missing:

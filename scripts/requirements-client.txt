@@ -1,0 +1,4 @@
+# For sending requests to an existing model server.
+# The CPU-only result calculator and scorer use the Python standard library.
+openai>=1.30
+tqdm>=4.65

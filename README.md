@@ -2,6 +2,8 @@
 
 # AgentRobustBench
 
+**English** | [简体中文](README_zh-CN.md)
+
 **A Sim-to-Real Benchmark and Domain-Randomized RL Recipe for Tool-Use Agents**
 
 NeurIPS 2026 · Evaluations & Datasets Track
@@ -20,15 +22,15 @@ AgentRobustBench measures how tool-use language agents handle failures that aris
 
 ## Reproduce a paper result in five minutes
 
-**Requires only Git and Python 3.** Recompute the paper's finding that ToolRL-DR-Full closes about 27% of the 3B ToolRL baseline's Transition gap.
+New to Python? Start with the browser demo below. It recomputes the paper's finding that ToolRL-DR-Full closes about 27% of the 3B ToolRL baseline's Transition gap, using the released leaderboard scores.
 
-```bash
-git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
-cd AgentRobustBench
-python3 scripts/reproduce_transition_gap.py
-```
+### Option 1: Run in your browser — no installation or GPU
 
-Expected output:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/WillChow66/AgentRobustBench/blob/main/docs/quickstart.ipynb)
+
+1. Click **Open in Colab**. Sign in to Google if prompted.
+2. Keep the default **CPU** runtime. Select **Runtime → Run all** and allow execution of this repository's notebook if Colab asks.
+3. Read the output below the code cell. You should see:
 
 ```text
 ToolRL-Clean Transition gap:    31.49 pp
@@ -37,35 +39,25 @@ Gap reduction:                  8.38 pp
 Baseline gap closed:            26.6%
 ```
 
-The script computes each model's gap as clean accuracy minus Transition accuracy, then divides the gap reduction by the baseline gap. It uses the [released leaderboard scores](leaderboard/leaderboard.csv). This reproduces the calculation from aggregate scores. Running fresh model inference requires an endpoint.
+Here, `pp` means percentage points. The script subtracts Transition accuracy from clean accuracy for each model, then divides the gap reduction by the baseline gap. The notebook downloads only the result calculator and the small score table.
 
-### Run a small evaluation on your model
+### Option 2: Run the same calculation on your computer
 
-With vLLM installed and a GPU available, start a local endpoint for the released Full checkpoint in one terminal. You can substitute `willchow66/ToolRL-DR-Mixed-Qwen2.5-3B` to evaluate Mixed.
-
-```bash
-vllm serve willchow66/ToolRL-DR-Full-Qwen2.5-3B --port 8000 --max-model-len 8192
-```
-
-In a second terminal, run the first three matched tasks from the clean and typo splits. This gives six scored cases through the same inference and scoring entry points used for the full benchmark.
+You need [Git](https://git-scm.com/downloads) and [Python 3](https://www.python.org/downloads/). On macOS, open **Terminal**; on Windows, open **PowerShell**. Paste one command at a time, pressing Enter after each:
 
 ```bash
-python3 -m pip install openai tqdm
-MODEL='willchow66/ToolRL-DR-Full-Qwen2.5-3B' # Use the same ID you passed to vllm serve.
-python3 scripts/run_eval.py \
-    --model-name "$MODEL" \
-    --endpoint http://localhost:8000/v1 \
-    --data-dir hf_data/datasets/api_eval \
-    --files clean.jsonl realistic_typos.jsonl \
-    --limit 3 --temperature 0 \
-    --output-dir results/quick-demo
-
-python3 leaderboard/scoring/eval_results.py \
-    --predictions results/quick-demo \
-    --output results/quick-demo/scores.json
+git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
+cd AgentRobustBench
+python3 scripts/reproduce_transition_gap.py
 ```
 
-The scorer reports `n=6` after a successful run. Accuracy depends on your model. See [Full evaluation quick start](#quick-start) for the full splits and [the training guide](training/README.md) for retraining.
+On Windows, use `py scripts/reproduce_transition_gap.py` for the last command. The output should match the four lines above. This calculation needs no Python packages, model download, API key, or GPU.
+
+### Run the model on six examples
+
+To generate new predictions, follow the [step-by-step evaluation guide](scripts/README.md#run-six-examples). It covers environment installation, starting the released checkpoint, running three clean and three typo examples, and checking the scores. The walkthrough uses a Linux machine with an NVIDIA GPU and Python 3.11 or 3.12. A Mac or Windows computer can also send requests to an existing model server using the client-only setup in that guide.
+
+After a successful six-example run, the scorer prints `n=6` and writes `results/quick-demo/scores.json`. Model installation, the first checkpoint download, and full benchmark evaluation take additional time. The browser demo above is the five-minute entry point for checking the published calculation.
 
 ## Benchmark
 
@@ -78,7 +70,7 @@ The scorer reports `n=6` after a successful run. Accuracy depends on your model.
 | Reward-relevant metadata | Information that steers tool choice | A misleading tool name or response-time annotation |
 | Transition | The response to a tool call | A transient timeout on the first attempt |
 
-The [Hugging Face dataset](https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench) contains **2,718 static records**. The evaluation runner adds **1,003 runtime cases** for a total of **3,721**. Submit predictions or browse per-category scores on the [live leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench).
+The [Hugging Face dataset](https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench) contains **2,718 static records**. The default single-turn runner evaluates **2,527** of them, skipping **191 multi-turn records**, and adds **1,194 runtime cases** (199 clean tasks × 6 error types), for **3,721 evaluated cases** in total. Submit predictions or browse per-category scores on the [live leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench).
 
 ## Results
 
@@ -99,34 +91,16 @@ The plot shows how much clean accuracy models retain across Observation, Action,
 
 | Checkpoint | Training data | Model card |
 | --- | --- | --- |
-| ToolRL-DR-Full (step 150) | Perturbed trajectories | [Hugging Face](https://huggingface.co/willchow66/ToolRL-DR-Full-Qwen2.5-3B) |
-| ToolRL-DR-Mixed (step 155) | Clean and perturbed trajectories | [Hugging Face](https://huggingface.co/willchow66/ToolRL-DR-Mixed-Qwen2.5-3B) |
+| ToolRL-DR-Full | Perturbed trajectories | [Hugging Face](https://huggingface.co/willchow66/ToolRL-DR-Full-Qwen2.5-3B) |
+| ToolRL-DR-Mixed | Clean and perturbed trajectories | [Hugging Face](https://huggingface.co/willchow66/ToolRL-DR-Mixed-Qwen2.5-3B) |
 
 The checkpoints are based on Qwen2.5-3B-Instruct and use the [Qwen Research License](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/blob/main/LICENSE). See [training/](training/) for the training data and reproduction instructions.
 
 ## Quick start
 
-```bash
-# 1. Run inference against any vLLM endpoint:
-python scripts/run_eval.py \
-    --model-name <model-id> \
-    --endpoint <vllm-endpoint>/v1 \
-    --data-dir hf_data/datasets/api_eval \
-    --output-dir results/<safe-name> \
-    --mode single \
-    --skip-multi-turn
+Start with [six examples](scripts/README.md#run-six-examples), then follow [full benchmark evaluation](scripts/README.md#full-benchmark-evaluation) to run all static splits and the six runtime perturbations. The guide includes the install commands, model-server check, inference commands, scoring command, and output locations.
 
-# 2. Score the predictions (deterministic; no API key required):
-python leaderboard/scoring/eval_results.py \
-    --predictions results/<safe-name> \
-    --output      results/<safe-name>/scores.json
-
-# 3. Or submit `results/<safe-name>/` to the public leaderboard Space
-#    (the Space runs the same scorer server-side).
-```
-
-The full SLURM end-to-end pipeline (boot vLLM → 17 single-mode files →
-6 Transition variants → score → teardown) is in `scripts/slurm/`.
+For cluster users, the SLURM pipeline is in [`scripts/slurm/`](scripts/slurm/). It needs your cluster's account, paths, and scheduler settings.
 
 ## Reproducing ToolRL-DR (optional)
 

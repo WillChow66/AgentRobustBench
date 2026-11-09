@@ -1,21 +1,8 @@
-# AgentRobustBench evaluation runtime dependencies.
-# Install into a dedicated conda env on the compute node:
-#
-#   module load python/miniforge3_pytorch/2.10.0
-#   conda create -n rbtc-vllm --clone base
-#   conda activate rbtc-vllm
-#   pip install -r scripts/requirements.txt
-#
-# No OpenAI API key is required — eval_results.py scores deterministically.
-#
-# vLLM version ≥ 0.7 is needed for Qwen3 / Gemma 4 architectures (2026-03+).
-# On <HPC-cluster>'s aarch64 GH200 nodes, the prebuilt wheel should work; fall
-# back to ``pip install vllm --no-build-isolation`` if wheels are missing.
+# Local GPU model serving plus evaluation client.
+# Install in a new environment: python -m pip install -r scripts/requirements.txt
+# Setup and hardware requirements: scripts/README.md
+# If a model server is already running, install requirements-client.txt instead.
 
-openai>=1.30
-tqdm>=4.65
+-r requirements-client.txt
 vllm>=0.7.0
-
-# huggingface_hub is a vllm dependency but we use it explicitly to pull the
-# api_eval data; pinning here to be safe.
 huggingface_hub>=0.25
