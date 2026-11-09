@@ -38,26 +38,47 @@ AgentRobustBench 评测语言智能体在实际部署变化下能否正确使用
 
 两个 HF checkpoint 的权重文件**各约 13.6 GB**。CPU 推理使用 float32，除权重外还需要额外运行内存；**建议从 32 GB 内存的机器开始尝试，这不是实测最低配置**。使用加速器时会选择半精度。首次下载及推理耗时取决于机器和网络，已验证的范围见[复现说明](docs/REPRODUCIBILITY.md)。
 
-### 第一步：安装环境
+### 第一步：安装 Python 环境和项目依赖
 
-需要 [Python 3.11 或 3.12](https://www.python.org/downloads/) 和 [Git](https://git-scm.com/downloads)。Mac / Linux 打开终端，Windows 打开 PowerShell。下载项目并建立独立环境：
+第一次配置时，建议通过 **Conda** 安装 Python，并创建独立环境。
+
+**还没有 Conda 时，先安装。** 运行 `conda --version`；如果提示找不到命令，按照 [Miniforge 官方安装指引](https://github.com/conda-forge/miniforge#install)，选择与你的操作系统和芯片匹配的安装程序。Mac / Linux 安装后重新打开终端；Windows 从开始菜单打开 **Miniforge Prompt**。已经装过 Anaconda、Miniconda 或 Miniforge 的读者，可以直接使用已有的 Conda。
+
+**本流程统一使用一个 Conda 环境。** 使用 `conda activate` 激活即可，不再额外创建 `.venv`。Windows 使用 Miniforge Prompt，或者已经能正常执行 Conda 命令的 PowerShell。
+
+**创建环境，同时安装 Python 3.12、pip 和 Git：**
+
+```bash
+conda create -n agentrobustbench -c conda-forge --override-channels python=3.12 pip git -y
+conda activate agentrobustbench
+python --version
+git --version
+```
+
+第一条命令会安装 Python 本身，不需要事先再单独安装系统 Python。后续命令都在这个已激活的环境里执行。如果你已经按照旧版说明配置好了 Python 3.11/3.12 的 `.venv`，继续使用它即可，直接从下面下载项目的步骤开始。
+
+**下载项目：**
 
 ```bash
 git clone --depth 1 https://github.com/WillChow66/AgentRobustBench.git
 cd AgentRobustBench
-python3 -m venv .venv
-source .venv/bin/activate
+```
+
+如果已经下载过项目，进入已有的项目目录执行 `git pull`，不用再次克隆。
+
+**安装依赖。** Mac 直接执行后面的 requirements 安装命令即可。Linux / Windows 如果只用 CPU，先安装 CPU 版 PyTorch：
+
+```bash
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+Linux / Windows 如果使用 NVIDIA GPU，先按照 [PyTorch 官方安装选择器](https://pytorch.org/get-started/locally/)安装 CUDA 版 PyTorch。然后，所有平台都执行项目依赖安装：
+
+```bash
 python -m pip install -r scripts/requirements-local.txt
 ```
 
-如果已经下载过仓库，直接进入已有目录，跳过克隆。Windows 用户将上面的最后三行替换为：
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r scripts/requirements-local.txt
-```
-
-Windows 中，以下命令的 `python` 都换成 `.\.venv\Scripts\python.exe`。Linux / Windows 如果只使用 CPU，可以先安装 CPU 版 PyTorch，再安装 requirements：`python -m pip install torch --index-url https://download.pytorch.org/whl/cpu`。Mac 使用上面的普通安装命令即可。
+这一步也会安装下面下载 checkpoint 要用的 Hugging Face `hf` 命令。
 
 ### 第二步：检查环境
 
@@ -75,7 +96,25 @@ python scripts/evaluate_checkpoint.py --device auto --check
 
 `auto` 按 CUDA → MPS → CPU 的顺序选择。如果 Windows / Linux 有 NVIDIA 显卡却显示 `cpu`，请检查 NVIDIA 驱动和 CUDA 版 PyTorch。Mac 则需要检查当前 macOS 与 PyTorch 是否支持 MPS。也可以将 `auto` 明确改成 `cpu`、`mps` 或 `cuda`；如果指定设备不可用，脚本会报错提示。
 
-### 第三步：使用 Full 或 Mixed 运行完整 benchmark
+### 第三步：下载 Full 或 Mixed checkpoint
+
+下载你想评测的模型即可；如果要评测两个模型，就分别运行两条下载命令。
+
+**下载 Full：**
+
+```bash
+hf download willchow66/ToolRL-DR-Full-Qwen2.5-3B --revision caf3c8dfd3f9914d056892c3ab740d35ee9a0eab
+```
+
+**下载 Mixed：**
+
+```bash
+hf download willchow66/ToolRL-DR-Mixed-Qwen2.5-3B --revision c93ea7730b10cb0c16025705f2753859ec639a5e
+```
+
+命令中的版本与[评测脚本配置](configs/checkpoints.json)一致。下载结束后会显示本地缓存路径。**同版本文件已经在缓存里时会直接复用，只下载缺少的文件，不会重新存一整份。** 不需要把权重复制到项目目录，也不需要手动把缓存路径填进评测命令。这两个模型仓库都是公开的，下载无需登录 HF。
+
+### 第四步：使用 Full 或 Mixed 运行完整 benchmark
 
 运行 Full：
 
@@ -89,9 +128,9 @@ python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device au
 python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
 ```
 
-脚本会自动加载对应的 HF tokenizer 和 checkpoint，使用基准原有的提示词与解析器生成预测，再调用原有评分器。评测数据已经随仓库提供，无需另外下载。首次下载后通常会复用 HF 本地缓存。以上命令会使用检查步骤选出的设备。如果只想使用 CPU，将 `--device auto` 改成 `--device cpu`。
+脚本会从第三步准备的 HF 缓存加载 tokenizer 和 checkpoint，使用基准原有的提示词与解析器生成预测，再调用原有评分器。如果跳过了手动下载步骤，评测时也会自动下载缺少的文件。评测数据已经随仓库提供，无需另外下载。以上命令会使用检查步骤选出的设备。如果只想使用 CPU，将 `--device auto` 改成 `--device cpu`。
 
-### 第四步：查看完整评测结果
+### 第五步：查看完整评测结果
 
 完整运行结束后，评分器会打印 **`n=3721`**，并显示 `results/` 下新建的结果目录。Full 和 Mixed 的结果分别保存。
 
