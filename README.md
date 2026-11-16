@@ -114,7 +114,12 @@ The revisions match [the evaluator's checkpoint configuration](configs/checkpoin
 
 ### 4. Choose what to evaluate
 
-**Complete benchmark (3,721 cases per model)**
+- [(1) Run the full benchmark](#1-run-the-full-benchmark) to compare results with the paper across all 3,721 cases.
+- [(2) Evaluate or sample by category](#2-evaluate-or-sample-by-category) to run selected categories or subtypes. Sample a few cases for a quick check.
+
+#### (1) Run the full benchmark
+
+Each model is evaluated on 3,721 cases.
 
 Run Full:
 
@@ -129,6 +134,10 @@ python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device a
 ```
 
 Use `--checkpoint full` or `--checkpoint mixed` to choose the model. `--suite full` runs the complete benchmark and is the default scope. The examples below work with either checkpoint. The evaluator reuses the Hugging Face cache or downloads missing files. Benchmark data comes with the repository. To force CPU inference, use `--device cpu`.
+
+#### (2) Evaluate or sample by category
+
+Use `--select` to choose what to evaluate and `--samples-per-type` to set the sample size for each subtype.
 
 **Available categories and subtypes**
 
