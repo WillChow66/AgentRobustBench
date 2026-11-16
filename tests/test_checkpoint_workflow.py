@@ -38,6 +38,42 @@ class ConfigurationTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_sampled_selection_scores_only_requested_types(self):
+        client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
+            create=lambda **kwargs: SimpleNamespace(choices=[SimpleNamespace(
+                message=SimpleNamespace(content="[]", tool_calls=None))])
+        )))
+        with tempfile.TemporaryDirectory() as td:
+            first, second = Path(td) / "first", Path(td) / "second"
+            with patch("transformers.AutoTokenizer.from_pretrained"), \
+                 patch("transformers.AutoModelForCausalLM.from_pretrained"), \
+                 patch.object(workflow, "LocalModelClient", return_value=client):
+                for output in (first, second):
+                    stdout, stderr = io.StringIO(), io.StringIO()
+                    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                        result = workflow.main([
+                            "--checkpoint", "mixed", "--device", "cpu", "--output-dir", str(output),
+                            "--select", "clean", "observation", "realistic_typos", "timeout",
+                            "--samples-per-type", "2", "--seed", "7",
+                        ])
+                    self.assertEqual(result, 0, stdout.getvalue() + stderr.getvalue())
+
+            scores = json.loads((first / "scores.json").read_text())["overall"]
+            self.assertEqual(scores["overall"]["n"], 12)
+            self.assertEqual({name: values["n"] for name, values in scores["by_perturbation"].items()}, {
+                "clean": 2, "realistic_typos": 2, "query_paraphrase": 2,
+                "paraphrase_tool_description": 2, "paraphrase_parameter_description": 2,
+                "transient_timeout": 2,
+            })
+            self.assertFalse((first / "comparison.csv").exists())
+            metadata = json.loads((first / "run_metadata.json").read_text())
+            self.assertEqual(metadata["suite"], "subset")
+            self.assertEqual(metadata["samples_per_type"], 2)
+            self.assertEqual(metadata["seed"], 7)
+            for path in first.rglob("*.predictions.jsonl"):
+                repeat = second / path.relative_to(first)
+                self.assertEqual(path.read_bytes(), repeat.read_bytes())
+
     def test_default_run_scores_the_entire_benchmark(self):
         # Exercise real dataset loading, all static/runtime jobs, and the scorer.
         # Only model generation is replaced, to keep this a CPU-only CI check.

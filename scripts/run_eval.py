@@ -48,6 +48,7 @@ Transition outputs are placed under ``{output-dir}/transition_{type}/``.
 import argparse
 import json
 import os
+import random
 import re
 import sys
 import time
@@ -1292,6 +1293,7 @@ def run_file(
     limit: Optional[int] = None,
     no_system_prompt: bool = False,
     enable_thinking: Optional[bool] = None,
+    sample_seed: Optional[int] = None,
 ) -> Tuple[int, int, int]:
     """Run inference for all samples in one jsonl file.
 
@@ -1300,6 +1302,8 @@ def run_file(
               "transition" → 2-pass: inject ``transition_error_message`` after
                   the first tool call, re-query, and record pass-2 output.
         transition_error_message: required when mode=="transition".
+        sample_seed: when provided with a limit, sample eligible rows without
+            replacement instead of taking the first rows.
 
     Returns (n_processed, n_skipped_multi_turn, n_errors).
     """
@@ -1323,11 +1327,17 @@ def run_file(
         if skip_multi_turn and is_multi_turn(s):
             n_skipped_mt += 1
             continue
-        if s.get("id") in done_ids:
+        if sample_seed is None and s.get("id") in done_ids:
             continue
         pending.append((idx, s))
-        if limit is not None and len(pending) >= limit:
+        if sample_seed is None and limit is not None and len(pending) >= limit:
             break
+    if sample_seed is not None:
+        if limit is not None and limit < len(pending):
+            pending = sorted(random.Random(sample_seed).sample(pending, limit),
+                             key=lambda item: item[0])
+        # Pick the same subset on a resumed run, then skip completed rows.
+        pending = [item for item in pending if item[1].get("id") not in done_ids]
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     open_mode = "a" if resume and output_path.exists() else "w"

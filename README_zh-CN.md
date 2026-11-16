@@ -114,7 +114,9 @@ hf download willchow66/ToolRL-DR-Mixed-Qwen2.5-3B --revision c93ea7730b10cb0c160
 
 命令中的版本与[评测脚本配置](configs/checkpoints.json)一致。下载结束后会显示本地缓存路径。**同版本文件已经在缓存里时会直接复用，只下载缺少的文件，不会重新存一整份。** 不需要把权重复制到项目目录，也不需要手动把缓存路径填进评测命令。这两个模型仓库都是公开的，下载无需登录 HF。
 
-### 第四步：使用 Full 或 Mixed 运行完整 benchmark
+### 第四步：选择评测范围
+
+**完整评测（每个模型 3,721 个案例）**
 
 运行 Full：
 
@@ -128,26 +130,66 @@ python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device au
 python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
 ```
 
-脚本会从第三步准备的 HF 缓存加载 tokenizer 和 checkpoint，使用基准原有的提示词与解析器生成预测，再调用原有评分器。如果跳过了手动下载步骤，评测时也会自动下载缺少的文件。评测数据已经随仓库提供，无需另外下载。以上命令会使用检查步骤选出的设备。如果只想使用 CPU，将 `--device auto` 改成 `--device cpu`。
+`--checkpoint full` 或 `--checkpoint mixed` 选择模型，`--suite full` 运行完整 benchmark，也是脚本的默认范围。以下示例都可以将 `--checkpoint full` 换成 `--checkpoint mixed`。脚本自动复用 Hugging Face 缓存，缺少的权重会在运行时下载；评测数据已随仓库提供。若要指定 CPU，使用 `--device cpu`。
 
-### 第五步：查看完整评测结果
+**可选范围**
 
-完整运行结束后，评分器会打印 **`n=3721`**，并显示 `results/` 下新建的结果目录。Full 和 Mixed 的结果分别保存。
+- `clean`：无扰动基线（199 个案例）。
+- `observation`（观测，4 个小类，共 796 个案例）：
+  - `realistic_typos`（错别字）、`query_paraphrase`（改写用户问题）。
+  - `paraphrase_tool_description`（改写工具描述）、`paraphrase_parameter_description`（改写参数描述）。
+- `action`（动作，6 个小类，共 836 个案例）：
+  - `same_name_A`、`same_name_B`、`same_name_C`、`same_name_D`、`same_name_E`（五种同名干扰）。
+  - `redundant`（加入功能相近的干扰工具）。
+- `reward`（影响工具选择的元信息，6 个小类，共 696 个案例）：
+  - `CD`、`CD_NT`、`CD_AB`（三种命名条件下的误导性描述）。
+  - `TD`、`TD_NT`、`TD_AB`（三种命名条件下的响应时间描述）。
+- `transition`（运行时错误，6 个小类，共 1,194 个案例）：
+  - `timeout`（超时）、`rate_limit`（429 限流）、`auth_error`（401 认证失败）。
+  - `server_error`（500 服务端错误）、`malformed_response`（无效 JSON）、`schema_drift`（返回结构变化）。
+
+**按类别运行或抽样**
+
+```bash
+# 跑一个大类的全部样本
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select observation
+
+# 跑一个小类的全部样本
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select timeout
+
+# 组合一个大类、一个小类和干净基线
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select observation timeout clean
+
+# 从 observation 的四个小类各抽 5 条，共 20 条
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select observation --samples-per-type 5
+
+# 只从超时小类抽 3 条
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select timeout --samples-per-type 3
+
+# 快速试跑：干净基线与错别字小类各抽 3 条，共 6 条
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select clean realistic_typos --samples-per-type 3 --seed 42
+```
+
+`--select` 后的名字用空格分隔，区分大小写。选择大类会包含其全部小类，重叠选择只运行一次。需要同时评测干净基线时，请把 `clean` 加入列表。
+
+`--samples-per-type N` 会从每个选中的小类（以及选中的 `clean`）随机抽最多 N 个符合单轮评测条件的案例，不重复抽取。同一数据版本和同一个 `--seed`（默认 42）可复用同一批样本。不传 `--select` 时，会对全部 22 个小类和干净基线各抽样。抽样会减少评测用时，模型仍需完整加载。
+
+### 第五步：查看评测结果
+
+评分器会打印本次实际评测数量 `n`，并显示 `results/` 下新建的结果目录。完整评测应显示 **`n=3721`**，子集评测的 `n` 取决于选择的类别和抽样数。
 
 | 文件 | 内容 |
 | --- | --- |
-| `comparison.csv` | 本次测得的干净样本准确率、扰动样本准确率及四类扰动准确率，同时列出公开参考分数和相差的百分点。 |
+| `comparison.csv`（完整评测） | 本次测得的干净样本准确率、扰动样本准确率及四类扰动准确率，同时列出公开参考分数和相差的百分点。 |
 | `scores.json` | 全部汇总分数，包括按数据来源和扰动类型划分的结果。 |
 | `*.predictions.jsonl`、`transition_*/*.predictions.jsonl` | 静态案例和运行时案例的模型输出及解析后的工具调用。 |
 | `per_sample_scores.jsonl` | 每个评测案例的评分。 |
 | `_run_summary.json` | 处理数量和错误数量。 |
-| `run_metadata.json` | checkpoint 版本、数据哈希、设备、精度、依赖版本、种子，以及加载和评测耗时。 |
+| `run_metadata.json` | checkpoint 版本、数据哈希、选中小类、抽样设置、设备、精度、依赖版本、种子及耗时。 |
 
 **对照论文时，查看 `comparison.csv` 中的对应指标。** `Clean` 是 199 个干净案例的准确率，`Pert. Acc.` 是 3,522 个扰动案例的准确率。控制台最上方的 `accuracy` 混合了这两组案例。
 
-`--checkpoint full` 或 `--checkpoint mixed` 选择模型；**`--suite full` 表示运行完整 benchmark，也是脚本的默认设置。** CPU 完整评测通常会比 GPU 更耗时。
-
-更多指标定义见[复现说明](docs/REPRODUCIBILITY.md)；使用独立模型服务时，参考 [vLLM 评测指南](scripts/README.md)。
+子集评测请查看 `scores.json` 和 `per_sample_scores.jsonl`。更多指标定义见[复现说明](docs/REPRODUCIBILITY.md)；使用独立模型服务时，参考 [vLLM 评测指南](scripts/README.md)。
 
 ## 基准介绍
 

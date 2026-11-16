@@ -55,6 +55,13 @@ for 3,721 scored cases. It skips the 191 multi-turn records in the static files.
 Every run gets a new directory unless `--output-dir` is supplied. A nonempty
 output directory is rejected to avoid mixing separate experiments.
 
+For targeted runs, `--select` accepts categories and subtypes together. See
+the [complete list of selectors](../README.md#4-choose-what-to-evaluate).
+`--samples-per-type N` samples up to N eligible cases from each selected
+subtype or clean baseline, without replacement. Use the same `--seed` and
+dataset version to repeat the selection. The run records the expanded
+selection and sampling settings in `run_metadata.json`.
+
 ## Metric mapping
 
 Full evaluation writes `comparison.csv`. Its **measured** column comes from

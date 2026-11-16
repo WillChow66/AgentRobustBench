@@ -16,6 +16,17 @@ from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL_REQUIREMENTS = ROOT / "scripts" / "requirements-local.txt"
+STATIC_CASES = {
+    "observation": (
+        "realistic_typos", "query_paraphrase", "paraphrase_tool_description",
+        "paraphrase_parameter_description",
+    ),
+    "action": (
+        "same_name_A", "same_name_B", "same_name_C", "same_name_D", "same_name_E",
+        "redundant",
+    ),
+    "reward": ("CD", "TD", "CD_NT", "TD_NT", "CD_AB", "TD_AB"),
+}
 
 
 def checkpoint_config(name, path=ROOT / "configs" / "checkpoints.json"):
@@ -110,16 +121,40 @@ def write_comparison(summary, checkpoint, output_dir):
     return path
 
 
-def evaluate(runner, client, checkpoint, suite, output_dir, max_tokens):
-    """Use the existing benchmark runner and scorer, without an HTTP server."""
+def evaluation_jobs(runner, suite, selectors=()):
+    """Expand category and subtype names into an ordered set of evaluation jobs."""
     data_dir = ROOT / "hf_data" / "datasets" / "api_eval"
     if suite == "demo":
-        jobs = [(data_dir / name, "single", None)
-                for name in ("clean.jsonl", "realistic_typos.jsonl")]
-    else:
-        jobs = [(p, "single", None) for p in sorted(data_dir.glob("*.jsonl"))]
-        jobs.extend((data_dir / "clean.jsonl", "transition", kind)
-                    for kind in runner.TRANSITION_ERROR_MESSAGES)
+        return [(data_dir / f"{name}.jsonl", "single", None)
+                for name in ("clean", "realistic_typos")]
+
+    groups = {**STATIC_CASES, "transition": tuple(runner.TRANSITION_ERROR_MESSAGES)}
+    static_names = ("clean", *(name for names in STATIC_CASES.values() for name in names))
+    jobs = {name: (data_dir / f"{name}.jsonl", "single", None)
+            for name in sorted(static_names)}
+    jobs.update({name: (data_dir / "clean.jsonl", "transition", name)
+                 for name in groups["transition"]})
+    if not selectors:
+        return list(jobs.values())
+
+    included = set()
+    for name in selectors:
+        if name in groups:
+            included.update(groups[name])
+        elif name in jobs:
+            included.add(name)
+        else:
+            valid = ", ".join([*groups, *jobs])
+            raise ValueError(f"Unknown --select value {name!r}. Choose from: {valid}.")
+    return [job for name, job in jobs.items() if name in included]
+
+
+def evaluate(runner, client, checkpoint, suite, output_dir, max_tokens, *,
+             jobs=None, samples_per_type=None, seed=42):
+    """Use the existing benchmark runner and scorer, without an HTTP server."""
+    if jobs is None:
+        jobs = evaluation_jobs(runner, suite)
+    limit = 3 if suite == "demo" else samples_per_type
     counts = []
     for path, mode, kind in jobs:
         target = output_dir / (f"transition_{kind}" if kind else "") / f"{path.stem}.predictions.jsonl"
@@ -129,7 +164,8 @@ def evaluate(runner, client, checkpoint, suite, output_dir, max_tokens):
             temperature=0, max_tokens=max_tokens, use_fc=False,
             max_workers=1, skip_multi_turn=True, resume=False, mode=mode,
             transition_error_message=runner.TRANSITION_ERROR_MESSAGES[kind] if kind else None,
-            limit=3 if suite == "demo" else None,
+            limit=limit,
+            sample_seed=seed if samples_per_type is not None else None,
         )
         counts.append({"file": str(target.relative_to(output_dir)), "processed": processed,
                        "skipped_multi_turn": skipped, "errors": errors})
@@ -142,7 +178,11 @@ def evaluate(runner, client, checkpoint, suite, output_dir, max_tokens):
         "--per-sample-output", str(output_dir / "per_sample_scores.jsonl"),
     ], check=True)
     summary = json.loads((output_dir / "scores.json").read_text(encoding="utf-8"))
-    expected = 6 if suite == "demo" else 3721
+    expected = sum(row["processed"] for row in counts)
+    if suite == "demo":
+        expected = 6
+    elif samples_per_type is None and jobs == evaluation_jobs(runner, "full"):
+        expected = 3721
     actual = summary["overall"]["overall"]["n"]
     if actual != expected:
         raise RuntimeError(f"Expected {expected} scored examples, got {actual}. Check the dataset and run summary.")
@@ -155,6 +195,13 @@ def main(argv=None):
     parser.add_argument("--device", choices=("auto", "cpu", "mps", "cuda"), default="auto")
     parser.add_argument("--suite", choices=("demo", "full"), default="full",
                         help="Evaluation scope: full benchmark (default); demo runs six examples.")
+    parser.add_argument("--select", nargs="+", action="extend", metavar="NAME",
+                        help="Run only these categories or subtypes. Use clean, observation, "
+                             "action, reward, transition, or subtype names such as "
+                             "realistic_typos and timeout. Names are case-sensitive.")
+    parser.add_argument("--samples-per-type", type=int, metavar="N",
+                        help="Randomly sample up to N eligible cases per selected subtype "
+                             "or clean baseline, without replacement (controlled by --seed).")
     parser.add_argument("--check", action="store_true", help="Check installed dependencies and device; do not download a model.")
     parser.add_argument("--max-tokens", type=int, default=1024)
     parser.add_argument("--max-context", type=int, default=8192)
@@ -165,6 +212,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if min(args.max_tokens, args.max_context, args.cpu_threads) < 1:
         parser.error("Token limits and CPU thread count must be positive.")
+    if args.samples_per_type is not None and args.samples_per_type < 1:
+        parser.error("--samples-per-type must be positive.")
+    if args.suite == "demo" and (args.select or args.samples_per_type is not None):
+        parser.error("--suite demo cannot be combined with --select or --samples-per-type.")
     config = checkpoint_config(args.checkpoint)
     versions = package_versions()
     missing = [p for p in ("torch", "transformers", "accelerate", "openai", "tqdm") if versions[p] is None]
@@ -178,6 +229,10 @@ def main(argv=None):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
         import run_eval as runner
+        try:
+            jobs = evaluation_jobs(runner, args.suite, args.select)
+        except ValueError as error:
+            parser.error(str(error))
         device = choose_device(torch, args.device)
         dtype = torch.float32 if device == "cpu" else (
             torch.bfloat16 if device == "cuda" and torch.cuda.is_bf16_supported() else torch.float16
@@ -193,20 +248,31 @@ def main(argv=None):
             print("Environment check passed. No model weights downloaded.")
             return 0
         data_dir = ROOT / "hf_data" / "datasets" / "api_eval"
-        if not (data_dir / "clean.jsonl").is_file() or not (data_dir / "realistic_typos.jsonl").is_file():
-            raise ValueError(f"Evaluation data not found in {data_dir}. Download the complete repository.")
-        output = args.output_dir or ROOT / "results" / f"{args.checkpoint}-{args.suite}-{time.time_ns()}"
+        selected_files = sorted({path for path, _, _ in jobs})
+        missing_files = [path.name for path in selected_files if not path.is_file()]
+        if missing_files:
+            raise ValueError(f"Evaluation files missing in {data_dir}: {', '.join(missing_files)}.")
+        variants = [kind or path.stem for path, _, kind in jobs]
+        complete = (args.suite == "full" and args.samples_per_type is None
+                    and jobs == evaluation_jobs(runner, "full"))
+        scope = "subset" if args.suite == "full" and not complete else args.suite
+        if scope == "subset":
+            print("Selected cases: " + ", ".join(variants))
+            if args.samples_per_type is not None:
+                print(f"Sampling up to {args.samples_per_type} per type (seed {args.seed}).")
+        output = args.output_dir or ROOT / "results" / f"{args.checkpoint}-{scope}-{time.time_ns()}"
         if output.exists() and any(output.iterdir()):
             raise ValueError(f"Output directory is not empty: {output}. Choose a new directory.")
         output.mkdir(parents=True, exist_ok=True)
         metadata = {
             "checkpoint": config, "model_source": str(args.model_path) if args.model_path else config["model_id"],
-            "suite": args.suite, "device": device, "dtype": str(dtype), "python": sys.version,
+            "suite": scope, "selected_types": variants, "samples_per_type": args.samples_per_type,
+            "device": device, "dtype": str(dtype), "python": sys.version,
             "platform": platform.platform(), "packages": versions, "seed": args.seed,
             "temperature": 0, "max_tokens": args.max_tokens, "max_context": args.max_context,
             "cpu_threads": args.cpu_threads, "status": "starting",
             "available_ram_bytes_at_start": available_ram,
-            "data_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(data_dir.glob("*.jsonl"))},
+            "data_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in selected_files},
         }
         if device == "cuda":
             metadata["gpu"] = torch.cuda.get_device_name(0)
@@ -235,10 +301,11 @@ def main(argv=None):
             client = LocalModelClient(model, tokenizer, torch, device, args.max_context)
             metadata["load_seconds"] = time.monotonic() - started
             inference_start = time.monotonic()
-            summary = evaluate(runner, client, config, args.suite, output, args.max_tokens)
+            summary = evaluate(runner, client, config, args.suite, output, args.max_tokens,
+                               jobs=jobs, samples_per_type=args.samples_per_type, seed=args.seed)
             metadata["evaluation_seconds"] = time.monotonic() - inference_start
             metadata["scored_examples"] = summary["overall"]["overall"]["n"]
-            if args.suite == "full" and not args.model_path:
+            if complete and not args.model_path:
                 print(f"Measured vs released scores: {write_comparison(summary, config, output)}")
             metadata["status"] = "completed"
             print(f"Results: {output.resolve()}")

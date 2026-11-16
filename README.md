@@ -112,7 +112,11 @@ hf download willchow66/ToolRL-DR-Mixed-Qwen2.5-3B --revision c93ea7730b10cb0c160
 
 The revisions match [the evaluator's checkpoint configuration](configs/checkpoints.json). Each command prints the local cache path when finished. **If the same files and revision are already cached, they are reused; missing files are downloaded.** You do not need to copy the weights into the project folder or pass their cache path to the evaluator. The repositories are public and do not require login for downloads.
 
-### 4. Evaluate Full or Mixed on the complete benchmark
+### 4. Choose what to evaluate
+
+**Complete benchmark (3,721 cases per model)**
+
+Run Full:
 
 ```bash
 python scripts/evaluate_checkpoint.py --checkpoint full --suite full --device auto
@@ -124,26 +128,66 @@ For Mixed, run:
 python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device auto
 ```
 
-Both commands load the tokenizer and checkpoint from the HF cache prepared in step 3, generate predictions using the benchmark's prompts and parsers, and run the existing scorer. If you skipped the download step, evaluation downloads the missing files automatically. The benchmark data comes with the repository. These commands use the device selected by the check above. To force CPU inference, replace `--device auto` with `--device cpu`.
+Use `--checkpoint full` or `--checkpoint mixed` to choose the model. `--suite full` runs the complete benchmark and is the default scope. The examples below work with either checkpoint. The evaluator reuses the Hugging Face cache or downloads missing files. Benchmark data comes with the repository. To force CPU inference, use `--device cpu`.
+
+**Available categories and subtypes**
+
+- `clean`: unperturbed baseline (199 cases).
+- `observation` (4 subtypes, 796 cases):
+  - `realistic_typos` (typos), `query_paraphrase` (user query paraphrase).
+  - `paraphrase_tool_description` (tool description rewrite), `paraphrase_parameter_description` (parameter description rewrite).
+- `action` (6 subtypes, 836 cases):
+  - `same_name_A`, `same_name_B`, `same_name_C`, `same_name_D`, `same_name_E` (five same-name distractor variants).
+  - `redundant` (functionally similar distractor).
+- `reward` (6 subtypes affecting tool choice, 696 cases):
+  - `CD`, `CD_NT`, `CD_AB` (misleading descriptions with three naming variants).
+  - `TD`, `TD_NT`, `TD_AB` (response-time descriptions with three naming variants).
+- `transition` (6 runtime error subtypes, 1,194 cases):
+  - `timeout`, `rate_limit` (429), `auth_error` (401).
+  - `server_error` (500), `malformed_response` (invalid JSON), `schema_drift` (changed response structure).
+
+**Select categories or sample cases**
+
+```bash
+# All cases in one category
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select observation
+
+# All cases in one subtype
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select timeout
+
+# Combine a category, a subtype, and the clean baseline
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select observation timeout clean
+
+# Five cases from each of the four observation subtypes, 20 total
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select observation --samples-per-type 5
+
+# Three cases from the timeout subtype
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select timeout --samples-per-type 3
+
+# Quick check: three cases each from the clean baseline and the typo subtype
+python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select clean realistic_typos --samples-per-type 3 --seed 42
+```
+
+Separate names after `--select` with spaces and match their capitalization. A category expands to all of its subtypes, and overlapping selections run once. Include `clean` to evaluate the unperturbed baseline alongside a selection.
+
+`--samples-per-type N` randomly draws up to N eligible single-turn cases per selected subtype and per selected clean baseline, without replacement. The same dataset and `--seed` (default 42) reproduce the selection. Without `--select`, sampling applies to all 22 subtypes and the clean baseline. Sampling reduces the number of cases to evaluate and still loads the full model.
 
 ### 5. Read the results
 
-A completed run prints **`n=3721`** and the path to a new output directory under `results/`. Full and Mixed runs save their results separately.
+A completed run prints the number of scored cases, `n`, and a new output directory under `results/`. A full run reports **`n=3721`**. A subset run reports the count for the chosen groups and sample size.
 
 | File | Contents |
 | --- | --- |
-| `comparison.csv` | Your measured `Clean`, `Pert. Acc.`, and four category accuracies, alongside released reference scores and differences in percentage points. |
+| `comparison.csv` (complete runs) | Your measured `Clean`, `Pert. Acc.`, and four category accuracies, alongside released reference scores and differences in percentage points. |
 | `scores.json` | All aggregate scores, including results by source benchmark and perturbation type. |
 | `*.predictions.jsonl`, `transition_*/*.predictions.jsonl` | Generated text and parsed tool calls for the static and runtime cases. |
 | `per_sample_scores.jsonl` | A score for every evaluation case. |
 | `_run_summary.json` | Processed counts and errors. |
-| `run_metadata.json` | Checkpoint revision, data hashes, device, precision, package versions, seed, and load/evaluation times. |
+| `run_metadata.json` | Checkpoint revision, data hashes, selected subtypes, sampling settings, device, precision, package versions, seed, and timings. |
 
 To compare with the paper, use the matching columns in **`comparison.csv`**. `Clean` measures the 199 clean cases; `Pert. Acc.` measures the 3,522 perturbed cases. The console's top-level `accuracy` combines both groups.
 
-`--checkpoint full` and `--checkpoint mixed` select the model. **`--suite full` selects the complete benchmark and is also the script's default.** CPU runs can take substantially longer than GPU runs.
-
-See [metric definitions](docs/REPRODUCIBILITY.md) or the [optional vLLM server guide](scripts/README.md) for more detail.
+Use `scores.json` and `per_sample_scores.jsonl` to inspect subset results. See [metric definitions](docs/REPRODUCIBILITY.md) or the [optional vLLM server guide](scripts/README.md) for more detail.
 
 ## Benchmark
 
