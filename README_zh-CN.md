@@ -116,7 +116,12 @@ hf download willchow66/ToolRL-DR-Mixed-Qwen2.5-3B --revision c93ea7730b10cb0c160
 
 ### 第四步：选择评测范围
 
-**完整评测（每个模型 3,721 个案例）**
+- [(1) 完整评测](#1-完整评测)：跑全部 3,721 个案例，和论文结果对照。
+- [(2) 按类别评测或抽样](#2-按类别评测或抽样)：只跑指定大类或小类，也可以每个小类抽几条快速试跑。
+
+#### (1) 完整评测
+
+每个模型评测 3,721 个案例。
 
 运行 Full：
 
@@ -131,6 +136,10 @@ python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device a
 ```
 
 `--checkpoint full` 或 `--checkpoint mixed` 选择模型，`--suite full` 运行完整 benchmark，也是脚本的默认范围。以下示例都可以将 `--checkpoint full` 换成 `--checkpoint mixed`。脚本自动复用 Hugging Face 缓存，缺少的权重会在运行时下载；评测数据已随仓库提供。若要指定 CPU，使用 `--device cpu`。
+
+#### (2) 按类别评测或抽样
+
+用 `--select` 选择范围，用 `--samples-per-type` 控制每个小类的抽样数量。
 
 **可选范围**
 
