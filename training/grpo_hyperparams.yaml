@@ -54,14 +54,14 @@ dataset_split:
     train_parquet: training/data/train.parquet
     val_parquet:   training/data/test.parquet
     notes: "All ToolRL rlla_4k samples replaced with perturbed counterparts; 79 held out for validation."
-    perturbation_distribution:
-      observation: 1362           # realistic_typos + query_paraphrase + paraphrase_{tool,parameter}_description
-      action: 519                 # same_name_{A..E} + redundant
-      reward: 2103                # CD, TD, CD_NT, TD_NT, CD_AB, TD_AB
+    perturbation_distribution:  # Training file only, excluding the 79 validation examples.
+      observation: 1333           # realistic_typos + query_paraphrase + paraphrase_{tool,parameter}_description
+      action: 506                 # same_name_{A..E} + redundant
+      reward: 2066                # CD, TD, CD_NT, TD_NT, CD_AB, TD_AB
   dr_mixed:
     train_parquet: training/data/mixed_train.parquet
     val_parquet:   training/data/test.parquet
-    notes: "50/50 mix: 2,000 clean + 2,000 perturbed."
+    notes: "4,000 training examples: 2,006 clean + 1,994 perturbed."
 
 reward:
   description: |

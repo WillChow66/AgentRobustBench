@@ -239,7 +239,7 @@ python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select c
 
 ## 训练复现
 
-训练用的 Parquet 文件已经放在 `training/data/` 中。按照[训练指南](training/README.md)完成 ToolRL 安装、奖励函数补丁和 `PYTHONPATH` 配置后，运行：
+`training/data/` 提供 **3,905 条 Full 训练数据**、**4,000 条 Mixed 训练数据**，以及两者共享的 **79 条验证数据**。按照[训练指南](training/README.md)完成 ToolRL 安装、奖励函数补丁和 `PYTHONPATH` 配置后，运行：
 
 ```bash
 TRAIN_FILE=training/data/train.parquet \

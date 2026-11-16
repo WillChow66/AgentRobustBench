@@ -13,9 +13,9 @@ here) by `convert_to_toolrl_parquet.py`, which is included as reference.
 
 | Path | Role |
 |------|------|
-| `data/train.parquet` | **DR-Full** training input. 3,826 perturbed samples in ToolRL parquet schema (`data_source`, `prompt`, `reward_model`, `extra_info`). Each `prompt` is a list of `{role, content}` messages; each `reward_model.ground_truth` is the ToolRL-format `<think>...</think>\n<tool_call>...</tool_call>` reference output. |
-| `data/mixed_train.parquet` | **DR-Mixed** training input. 4,000 samples (~50/50 clean / perturbed). Same schema. |
-| `data/test.parquet` | 79-sample validation split used during training (referenced by `data.val_files` in the GRPO launcher; trainer evaluates on it every 5 epochs). |
+| `data/train.parquet` | **DR-Full** training input. 3,905 perturbed training samples in ToolRL parquet schema (`data_source`, `prompt`, `reward_model`, `extra_info`). Each `prompt` is a list of `{role, content}` messages; each `reward_model.ground_truth` is the ToolRL-format `<think>...</think>\n<tool_call>...</tool_call>` reference output. |
+| `data/mixed_train.parquet` | **DR-Mixed** training input. 4,000 training samples (2,006 clean and 1,994 perturbed). Same schema. |
+| `data/test.parquet` | 79-sample validation split shared by DR-Full and DR-Mixed (referenced by `data.val_files` in the GRPO launcher; trainer evaluates on it every 5 epochs). |
 | `convert_to_toolrl_parquet.py` | Reference script that converts source JSONLs in our schema into the ToolRL parquet schema above. The shipped parquets were produced by this script; reviewers do **not** need to rerun it (the JSONL sources are not in this release). |
 | `rlla_perturbed.py` | Reward-function file. **Drop-in replacement** for `verl/utils/reward_score/rlla.py` in the public ToolRL/veRL repo. The only behavioral change vs. upstream is that response-only samples receive a non-zero correctness signal instead of a flat 0.0. |
 | `grpo_launch.sh` | End-to-end GRPO launcher. Hyperparameters identical to the public ToolRL recipe (lr=1e-6, KL=0.001, rollout n=4, 15 epochs); only the data path differs between DR-Full and DR-Mixed. |

@@ -237,8 +237,8 @@ The checkpoints are based on Qwen2.5-3B-Instruct and use the [Qwen Research Lice
 
 ## Reproducing ToolRL-DR (optional)
 
-The parquets fed to the GRPO trainer are already in `training/data/`,
-so you can train without running the data converter. After the one-time setup
+The released Parquet files in `training/data/` contain **3,905 Full training examples**, **4,000 Mixed training examples**, and **79 validation examples shared by both models**.
+You can use these files without running the data converter. After the one-time setup
 described in `training/README.md` (clone public ToolRL, drop in the
 `rlla_perturbed.py` reward patch, set `PYTHONPATH`):
 
