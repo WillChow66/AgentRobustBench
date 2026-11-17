@@ -285,11 +285,11 @@ bash training/grpo_launch.sh
 
 ## Citation
 
-The current arXiv record lists the paper under its original title.
+This BibTeX entry uses the title from [arXiv v3](https://arxiv.org/abs/2605.11928v3).
 
 ```bibtex
-@misc{zhou2026whensimulationlies,
-  title         = {When Simulation Lies: A Sim-to-Real Benchmark and Domain-Randomized RL Recipe for Tool-Use Agents},
+@misc{zhou2026agentrobustbench,
+  title         = {{AgentRobustBench}: A Sim-to-Real Benchmark and Domain-Randomized {RL} Recipe for Tool-Use Agents},
   author        = {Zhou, Xiaolin and Yuan, Aojie and Luo, Zheng and Ling, Zipeng and
                    Pan, Xixiao and Gao, Yicheng and Zhang, Haiyue and Li, Jiate and
                    Jiang, Shuli and Wang, Prince Zizhuang and Zhu, Zixuan and
