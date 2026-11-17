@@ -114,10 +114,9 @@ The revisions match [the evaluator's checkpoint configuration](configs/checkpoin
 
 ### 4. Choose what to evaluate
 
-To reproduce a particular value from Table 2 of the paper, find its command in [Results](#results).
-
 - [(1) Run the full benchmark](#1-run-the-full-benchmark) to compare results with the paper across all 3,721 cases.
-- [(2) Evaluate or sample by category](#2-evaluate-or-sample-by-category) to run selected categories or subtypes. Sample a few cases for a quick check.
+- [(2) Reproduce a specific result](#2-reproduce-a-specific-result) to evaluate all cases required for one metric in the paper.
+- [(3) Evaluate or sample by category](#3-evaluate-or-sample-by-category) to run selected categories or subtypes. Sample a few cases for a quick check.
 
 #### (1) Run the full benchmark
 
@@ -137,7 +136,19 @@ python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device a
 
 Use `--checkpoint full` or `--checkpoint mixed` to choose the model. `--suite full` runs the complete benchmark and is the default scope. The examples below work with either checkpoint. The evaluator reuses the Hugging Face cache or downloads missing files. Benchmark data comes with the repository. To force CPU inference, use `--device cpu`.
 
-#### (2) Evaluate or sample by category
+#### (2) Reproduce a specific result
+
+Pick a score from the [results table](#results). To reproduce **Mixed ΔTrn (0.232)**, run this command from the repository directory:
+
+```bash
+python scripts/evaluate_checkpoint.py --checkpoint mixed --metric delta-trn --device auto
+```
+
+For any other cell, set `--checkpoint` to `full` or `mixed` and copy the `--metric` option from its row. The script evaluates every case required for the metric, prints a line such as `Table 2 delta-trn: ...` (three decimal places), and saves the unrounded score to `table2_metrics.json` in the run directory.
+
+Local scores can vary with the device and numerical precision. Appendix K of the [paper](https://arxiv.org/pdf/2605.11928) describes the inference setup.
+
+#### (3) Evaluate or sample by category
 
 Use `--select` to choose what to evaluate and `--samples-per-type` to set the sample size for each subtype.
 
@@ -227,15 +238,7 @@ The table shows the point estimates for our two released checkpoints from [Table
 | ΔRew ↓ | 0.331 | 0.364 | Clean + Reward (895) | `--metric delta-rew` |
 | ΔTrn ↓ | 0.231 | 0.232 | Clean + Transition (1,393) | `--metric delta-trn` |
 
-After [setting up the environment](#1-install-python-and-the-project-dependencies), run the command from the repository directory. For example, to reproduce **Mixed ΔTrn (0.232)**:
-
-```bash
-python scripts/evaluate_checkpoint.py --checkpoint mixed --metric delta-trn --device auto
-```
-
-For any other cell, set `--checkpoint` to `full` or `mixed` and copy the `--metric` option from its row. The script evaluates every case required for the metric, prints a line such as `Table 2 delta-trn: ...` (three decimal places), and saves the unrounded score to `table2_metrics.json` in the run directory. To get all six metrics for a checkpoint at once, use the [full benchmark command](#1-run-the-full-benchmark).
-
-Local scores can vary with the device and numerical precision. Appendix K of the [paper](https://arxiv.org/pdf/2605.11928) describes the inference setup.
+See [Step 4 (2)](#2-reproduce-a-specific-result) for a runnable command and where to find the score.
 
 ![Robustness retention across model sizes, with ToolRL-DR-Full and ToolRL-DR-Mixed highlighted](docs/assets/robustness-retention.webp)
 
