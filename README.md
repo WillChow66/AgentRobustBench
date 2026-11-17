@@ -114,6 +114,8 @@ The revisions match [the evaluator's checkpoint configuration](configs/checkpoin
 
 ### 4. Choose what to evaluate
 
+To reproduce a particular value from Table 2 of the paper, find its command in [Results](#results).
+
 - [(1) Run the full benchmark](#1-run-the-full-benchmark) to compare results with the paper across all 3,721 cases.
 - [(2) Evaluate or sample by category](#2-evaluate-or-sample-by-category) to run selected categories or subtypes. Sample a few cases for a quick check.
 
@@ -188,13 +190,14 @@ A completed run prints the number of scored cases, `n`, and a new output directo
 | File | Contents |
 | --- | --- |
 | `comparison.csv` (complete runs) | Your measured `Clean`, `Pert. Acc.`, and four category accuracies, alongside released reference scores and differences in percentage points. |
+| `table2_metrics.json` (full runs or `--metric` runs) | Scores using Table 2's definitions, including the accuracy gaps. |
 | `scores.json` | All aggregate scores, including results by source benchmark and perturbation type. |
 | `*.predictions.jsonl`, `transition_*/*.predictions.jsonl` | Generated text and parsed tool calls for the static and runtime cases. |
 | `per_sample_scores.jsonl` | A score for every evaluation case. |
 | `_run_summary.json` | Processed counts and errors. |
 | `run_metadata.json` | Checkpoint revision, data hashes, selected subtypes, sampling settings, device, precision, package versions, seed, and timings. |
 
-To compare with the paper, use the matching columns in **`comparison.csv`**. `Clean` measures the 199 clean cases; `Pert. Acc.` measures the 3,522 perturbed cases. The console's top-level `accuracy` combines both groups.
+To compare with Table 2 of the paper, use **`table2_metrics.json`**. `Clean` measures the 199 clean cases; `Pert. Acc.` measures the 3,522 perturbed cases. The console's top-level `accuracy` combines both groups.
 
 Use `scores.json` and `per_sample_scores.jsonl` to inspect subset results. See [metric definitions](docs/REPRODUCIBILITY.md) or the [optional vLLM server guide](scripts/README.md) for more detail.
 
@@ -212,6 +215,27 @@ Use `scores.json` and `per_sample_scores.jsonl` to inspect subset results. See [
 The [Hugging Face dataset](https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench) contains **2,718 static records**. The default single-turn runner evaluates **2,527** of them, skipping **191 multi-turn records**, and adds **1,194 runtime cases** (199 clean tasks × 6 error types), for **3,721 evaluated cases** in total. Submit predictions or browse per-category scores on the [live leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench).
 
 ## Results
+
+The table shows the point estimates for our two released checkpoints from [Table 2 of the paper](https://arxiv.org/pdf/2605.11928#page=7). Each Δ is clean accuracy minus accuracy on the corresponding perturbation category. See the [leaderboard](https://huggingface.co/spaces/willchow66/AgentRobustBench) for all 21 models.
+
+| Metric | ToolRL-DR-Full | ToolRL-DR-Mixed | Cases evaluated | Command option |
+| --- | ---: | ---: | --- | --- |
+| Clean ↑ | 0.643 | 0.658 | 199 clean | `--metric clean` |
+| Pert. Acc. ↑ | 0.463 | 0.461 | 3,522 perturbed | `--metric pert-acc` |
+| ΔObs ↓ | 0.009 | 0.049 | Clean + Observation (995) | `--metric delta-obs` |
+| ΔAct ↓ | 0.147 | 0.152 | Clean + Action (1,035) | `--metric delta-act` |
+| ΔRew ↓ | 0.331 | 0.364 | Clean + Reward (895) | `--metric delta-rew` |
+| ΔTrn ↓ | 0.231 | 0.232 | Clean + Transition (1,393) | `--metric delta-trn` |
+
+After [setting up the environment](#1-install-python-and-the-project-dependencies), run the command from the repository directory. For example, to reproduce **Mixed ΔTrn (0.232)**:
+
+```bash
+python scripts/evaluate_checkpoint.py --checkpoint mixed --metric delta-trn --device auto
+```
+
+For any other cell, set `--checkpoint` to `full` or `mixed` and copy the `--metric` option from its row. The script evaluates every case required for the metric, prints a line such as `Table 2 delta-trn: ...` (three decimal places), and saves the unrounded score to `table2_metrics.json` in the run directory. To get all six metrics for a checkpoint at once, use the [full benchmark command](#1-run-the-full-benchmark).
+
+Local scores can vary with the device and numerical precision. Appendix K of the [paper](https://arxiv.org/pdf/2605.11928) describes the inference setup.
 
 ![Robustness retention across model sizes, with ToolRL-DR-Full and ToolRL-DR-Mixed highlighted](docs/assets/robustness-retention.webp)
 

@@ -27,6 +27,14 @@ STATIC_CASES = {
     ),
     "reward": ("CD", "TD", "CD_NT", "TD_NT", "CD_AB", "TD_AB"),
 }
+TABLE2_SCOPES = {
+    "clean": ("clean",),
+    "pert-acc": (*STATIC_CASES, "transition"),
+    "delta-obs": ("clean", "observation"),
+    "delta-act": ("clean", "action"),
+    "delta-rew": ("clean", "reward"),
+    "delta-trn": ("clean", "transition"),
+}
 
 
 def checkpoint_config(name, path=ROOT / "configs" / "checkpoints.json"):
@@ -121,6 +129,18 @@ def write_comparison(summary, checkpoint, output_dir):
     return path
 
 
+def table2_metric(categories, metric):
+    scope = TABLE2_SCOPES[metric]
+    if metric == "pert-acc":
+        return sum(categories[name]["correct"] for name in scope) / sum(
+            categories[name]["n"] for name in scope
+        )
+    clean = categories["clean"]["accuracy"]
+    if metric == "clean":
+        return clean
+    return clean - categories[scope[1]]["accuracy"]
+
+
 def evaluation_jobs(runner, suite, selectors=()):
     """Expand category and subtype names into an ordered set of evaluation jobs."""
     data_dir = ROOT / "hf_data" / "datasets" / "api_eval"
@@ -195,6 +215,8 @@ def main(argv=None):
     parser.add_argument("--device", choices=("auto", "cpu", "mps", "cuda"), default="auto")
     parser.add_argument("--suite", choices=("demo", "full"), default="full",
                         help="Evaluation scope: full benchmark (default); demo runs six examples.")
+    parser.add_argument("--metric", choices=TABLE2_SCOPES,
+                        help="Run all cases required for one paper Table 2 metric.")
     parser.add_argument("--select", nargs="+", action="extend", metavar="NAME",
                         help="Run only these categories or subtypes. Use clean, observation, "
                              "action, reward, transition, or subtype names such as "
@@ -216,6 +238,8 @@ def main(argv=None):
         parser.error("--samples-per-type must be positive.")
     if args.suite == "demo" and (args.select or args.samples_per_type is not None):
         parser.error("--suite demo cannot be combined with --select or --samples-per-type.")
+    if args.metric and (args.select or args.samples_per_type is not None or args.suite == "demo"):
+        parser.error("--metric cannot be combined with --select, --samples-per-type, or --suite demo.")
     config = checkpoint_config(args.checkpoint)
     versions = package_versions()
     missing = [p for p in ("torch", "transformers", "accelerate", "openai", "tqdm") if versions[p] is None]
@@ -229,8 +253,9 @@ def main(argv=None):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
         import run_eval as runner
+        selectors = TABLE2_SCOPES[args.metric] if args.metric else args.select
         try:
-            jobs = evaluation_jobs(runner, args.suite, args.select)
+            jobs = evaluation_jobs(runner, args.suite, selectors)
         except ValueError as error:
             parser.error(str(error))
         device = choose_device(torch, args.device)
@@ -274,6 +299,8 @@ def main(argv=None):
             "available_ram_bytes_at_start": available_ram,
             "data_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in selected_files},
         }
+        if args.metric:
+            metadata["target_metric"] = args.metric
         if device == "cuda":
             metadata["gpu"] = torch.cuda.get_device_name(0)
         try:
@@ -305,6 +332,14 @@ def main(argv=None):
                                jobs=jobs, samples_per_type=args.samples_per_type, seed=args.seed)
             metadata["evaluation_seconds"] = time.monotonic() - inference_start
             metadata["scored_examples"] = summary["overall"]["overall"]["n"]
+            if args.metric or complete:
+                metrics = (args.metric,) if args.metric else TABLE2_SCOPES
+                categories = summary["overall"]["by_mdp_category"]
+                values = {metric: table2_metric(categories, metric) for metric in metrics}
+                path = output / "table2_metrics.json"
+                path.write_text(json.dumps(values, indent=2) + "\n", encoding="utf-8")
+                for metric, value in values.items():
+                    print(f"Table 2 {metric}: {value:.3f}")
             if complete and not args.model_path:
                 print(f"Measured vs released scores: {write_comparison(summary, config, output)}")
             metadata["status"] = "completed"

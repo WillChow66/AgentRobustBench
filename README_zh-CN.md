@@ -116,6 +116,8 @@ hf download willchow66/ToolRL-DR-Mixed-Qwen2.5-3B --revision c93ea7730b10cb0c160
 
 ### 第四步：选择评测范围
 
+想复现论文表 2 的某个数字？在[实验结果](#实验结果)里按指标查命令。
+
 - [(1) 完整评测](#1-完整评测)：跑全部 3,721 个案例，和论文结果对照。
 - [(2) 按类别评测或抽样](#2-按类别评测或抽样)：只跑指定大类或小类，也可以每个小类抽几条快速试跑。
 
@@ -190,13 +192,14 @@ python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select c
 | 文件 | 内容 |
 | --- | --- |
 | `comparison.csv`（完整评测） | 本次测得的干净样本准确率、扰动样本准确率及四类扰动准确率，同时列出公开参考分数和相差的百分点。 |
+| `table2_metrics.json`（完整评测或指定 `--metric`） | 对应论文表 2 的指标，包括准确率差值。 |
 | `scores.json` | 全部汇总分数，包括按数据来源和扰动类型划分的结果。 |
 | `*.predictions.jsonl`、`transition_*/*.predictions.jsonl` | 静态案例和运行时案例的模型输出及解析后的工具调用。 |
 | `per_sample_scores.jsonl` | 每个评测案例的评分。 |
 | `_run_summary.json` | 处理数量和错误数量。 |
 | `run_metadata.json` | checkpoint 版本、数据哈希、选中小类、抽样设置、设备、精度、依赖版本、种子及耗时。 |
 
-**对照论文时，查看 `comparison.csv` 中的对应指标。** `Clean` 是 199 个干净案例的准确率，`Pert. Acc.` 是 3,522 个扰动案例的准确率。控制台最上方的 `accuracy` 混合了这两组案例。
+**对照论文表 2 时，查看 `table2_metrics.json`。** `Clean` 是 199 个干净案例的准确率，`Pert. Acc.` 是 3,522 个扰动案例的准确率。控制台最上方的 `accuracy` 混合了这两组案例。
 
 子集评测请查看 `scores.json` 和 `per_sample_scores.jsonl`。更多指标定义见[复现说明](docs/REPRODUCIBILITY.md)；使用独立模型服务时，参考 [vLLM 评测指南](scripts/README.md)。
 
@@ -214,6 +217,27 @@ python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select c
 [Hugging Face 数据集](https://huggingface.co/datasets/AgentRobustBench/AgentRobustBench) 包含 **2,718 条静态记录**。默认的单轮评测运行其中 **2,527 条**，跳过 **191 条多轮记录**，再增加 **1,194 个运行时案例**（199 个干净任务 × 6 种错误），合计 **3,721 个评测案例**。可以在[在线排行榜](https://huggingface.co/spaces/willchow66/AgentRobustBench)查看模型和各类扰动的得分。
 
 ## 实验结果
+
+下表列出我们两个公开 checkpoint 在[论文表 2](https://arxiv.org/pdf/2605.11928#page=7)中的点估计。每个 Δ 指标等于干净样本准确率减去对应扰动大类的准确率。21 个模型的完整分数见[排行榜](https://huggingface.co/spaces/willchow66/AgentRobustBench)。
+
+| 指标 | ToolRL-DR-Full | ToolRL-DR-Mixed | 评测范围 | 命令参数 |
+| --- | ---: | ---: | --- | --- |
+| Clean ↑ | 0.643 | 0.658 | 199 个干净案例 | `--metric clean` |
+| Pert. Acc. ↑ | 0.463 | 0.461 | 3,522 个扰动案例 | `--metric pert-acc` |
+| ΔObs ↓ | 0.009 | 0.049 | 干净案例 + Observation (995 个) | `--metric delta-obs` |
+| ΔAct ↓ | 0.147 | 0.152 | 干净案例 + Action (1,035 个) | `--metric delta-act` |
+| ΔRew ↓ | 0.331 | 0.364 | 干净案例 + Reward (895 个) | `--metric delta-rew` |
+| ΔTrn ↓ | 0.231 | 0.232 | 干净案例 + Transition (1,393 个) | `--metric delta-trn` |
+
+按[第一步](#第一步安装-python-环境和项目依赖)装好环境后，在仓库目录运行下面的命令。例如，复现 **Mixed 的 ΔTrn（0.232）**：
+
+```bash
+python scripts/evaluate_checkpoint.py --checkpoint mixed --metric delta-trn --device auto
+```
+
+要复现其他单元格，将 `--checkpoint` 设为 `full` 或 `mixed`，再换成该行的 `--metric` 参数。脚本会运行计算该指标所需的全部样本，在终端打印 `Table 2 delta-trn: ...`（三位小数），并将未舍入的分数保存到本次结果目录的 `table2_metrics.json`。要一次获得同一个 checkpoint 的六项指标，使用[完整评测命令](#1-完整评测)。
+
+本地推理的分数可能因设备或数值精度而异。论文的推理设置见[附录 K](https://arxiv.org/pdf/2605.11928)。
 
 ![不同模型规模下的准确率保持比例](docs/assets/robustness-retention.webp)
 
