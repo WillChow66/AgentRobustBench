@@ -35,6 +35,13 @@ TABLE2_SCOPES = {
     "delta-rew": ("clean", "reward"),
     "delta-trn": ("clean", "transition"),
 }
+TABLE2_SHORT_NAMES = {
+    "pert": "pert-acc",
+    "obs": "delta-obs",
+    "act": "delta-act",
+    "rew": "delta-rew",
+    "trn": "delta-trn",
+}
 
 
 def checkpoint_config(name, path=ROOT / "configs" / "checkpoints.json"):
@@ -215,7 +222,8 @@ def main(argv=None):
     parser.add_argument("--device", choices=("auto", "cpu", "mps", "cuda"), default="auto")
     parser.add_argument("--suite", choices=("demo", "full"), default="full",
                         help="Evaluation scope: full benchmark (default); demo runs six examples.")
-    parser.add_argument("--metric", choices=TABLE2_SCOPES,
+    parser.add_argument("--metric", choices=(*TABLE2_SCOPES, *TABLE2_SHORT_NAMES),
+                        metavar="{clean,pert,obs,act,rew,trn}",
                         help="Run all cases required for one paper Table 2 metric.")
     parser.add_argument("--select", nargs="+", action="extend", metavar="NAME",
                         help="Run only these categories or subtypes. Use clean, observation, "
@@ -232,6 +240,7 @@ def main(argv=None):
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--model-path", type=Path, help="Load an existing local model/tokenizer directory instead of HF.")
     args = parser.parse_args(argv)
+    args.metric = TABLE2_SHORT_NAMES.get(args.metric, args.metric)
     if min(args.max_tokens, args.max_context, args.cpu_threads) < 1:
         parser.error("Token limits and CPU thread count must be positive.")
     if args.samples_per_type is not None and args.samples_per_type < 1:

@@ -141,10 +141,12 @@ Use `--checkpoint full` or `--checkpoint mixed` to choose the model. `--suite fu
 Pick a score from the [results table](#results). To reproduce **Mixed ΔTrn (0.232)**, run this command from the repository directory:
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint mixed --metric delta-trn --device auto
+python scripts/evaluate_checkpoint.py --checkpoint mixed --metric trn --device auto
 ```
 
-For any other cell, set `--checkpoint` to `full` or `mixed` and copy the `--metric` option from its row. The script evaluates every case required for the metric, prints a line such as `Table 2 delta-trn: ...` (three decimal places), and saves the unrounded score to `table2_metrics.json` in the run directory.
+**`--metric` options** `clean` (Clean), `pert` (Pert. Acc.), `obs` (ΔObs), `act` (ΔAct), `rew` (ΔRew), `trn` (ΔTrn).
+
+Use `--checkpoint full` or `--checkpoint mixed` to choose the model. The script evaluates all cases for the selected metric, prints the score, and saves it to `table2_metrics.json`.
 
 Local scores can vary with the device and numerical precision. Appendix K of the [paper](https://arxiv.org/pdf/2605.11928) describes the inference setup.
 
@@ -232,11 +234,11 @@ The table shows the point estimates for our two released checkpoints from [Table
 | Metric | ToolRL-DR-Full | ToolRL-DR-Mixed | Cases evaluated | Command option |
 | --- | ---: | ---: | --- | --- |
 | Clean ↑ | 0.643 | 0.658 | 199 clean | `--metric clean` |
-| Pert. Acc. ↑ | 0.463 | 0.461 | 3,522 perturbed | `--metric pert-acc` |
-| ΔObs ↓ | 0.009 | 0.049 | Clean + Observation (995) | `--metric delta-obs` |
-| ΔAct ↓ | 0.147 | 0.152 | Clean + Action (1,035) | `--metric delta-act` |
-| ΔRew ↓ | 0.331 | 0.364 | Clean + Reward (895) | `--metric delta-rew` |
-| ΔTrn ↓ | 0.231 | 0.232 | Clean + Transition (1,393) | `--metric delta-trn` |
+| Pert. Acc. ↑ | 0.463 | 0.461 | 3,522 perturbed | `--metric pert` |
+| ΔObs ↓ | 0.009 | 0.049 | Clean + Observation (995) | `--metric obs` |
+| ΔAct ↓ | 0.147 | 0.152 | Clean + Action (1,035) | `--metric act` |
+| ΔRew ↓ | 0.331 | 0.364 | Clean + Reward (895) | `--metric rew` |
+| ΔTrn ↓ | 0.231 | 0.232 | Clean + Transition (1,393) | `--metric trn` |
 
 See [Step 4 (2)](#2-reproduce-a-specific-result) for a runnable command and where to find the score.
 

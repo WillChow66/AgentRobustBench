@@ -143,10 +143,12 @@ python scripts/evaluate_checkpoint.py --checkpoint mixed --suite full --device a
 从[实验结果表](#实验结果)中选一个分数。例如，要复现 **Mixed 的 ΔTrn（0.232）**，在仓库目录运行下面的命令。
 
 ```bash
-python scripts/evaluate_checkpoint.py --checkpoint mixed --metric delta-trn --device auto
+python scripts/evaluate_checkpoint.py --checkpoint mixed --metric trn --device auto
 ```
 
-要复现其他单元格，将 `--checkpoint` 设为 `full` 或 `mixed`，再换成该行的 `--metric` 参数。脚本会运行计算该指标所需的全部样本，在终端打印 `Table 2 delta-trn: ...`（三位小数），并将未舍入的分数保存到本次结果目录的 `table2_metrics.json`。
+**`--metric` 可选值**　`clean`（Clean）、`pert`（Pert. Acc.）、`obs`（ΔObs）、`act`（ΔAct）、`rew`（ΔRew）、`trn`（ΔTrn）。
+
+用 `--checkpoint full` 或 `--checkpoint mixed` 选模型，再用 `--metric` 选指标。脚本会运行该指标所需的全部案例，在终端打印分数，并保存到 `table2_metrics.json`。
 
 本地推理的分数可能因设备或数值精度而异。论文的推理设置见[附录 K](https://arxiv.org/pdf/2605.11928)。
 
@@ -234,11 +236,11 @@ python scripts/evaluate_checkpoint.py --checkpoint full --device auto --select c
 | 指标 | ToolRL-DR-Full | ToolRL-DR-Mixed | 评测范围 | 命令参数 |
 | --- | ---: | ---: | --- | --- |
 | Clean ↑ | 0.643 | 0.658 | 199 个干净案例 | `--metric clean` |
-| Pert. Acc. ↑ | 0.463 | 0.461 | 3,522 个扰动案例 | `--metric pert-acc` |
-| ΔObs ↓ | 0.009 | 0.049 | 干净案例 + Observation (995 个) | `--metric delta-obs` |
-| ΔAct ↓ | 0.147 | 0.152 | 干净案例 + Action (1,035 个) | `--metric delta-act` |
-| ΔRew ↓ | 0.331 | 0.364 | 干净案例 + Reward (895 个) | `--metric delta-rew` |
-| ΔTrn ↓ | 0.231 | 0.232 | 干净案例 + Transition (1,393 个) | `--metric delta-trn` |
+| Pert. Acc. ↑ | 0.463 | 0.461 | 3,522 个扰动案例 | `--metric pert` |
+| ΔObs ↓ | 0.009 | 0.049 | 干净案例 + Observation (995 个) | `--metric obs` |
+| ΔAct ↓ | 0.147 | 0.152 | 干净案例 + Action (1,035 个) | `--metric act` |
+| ΔRew ↓ | 0.331 | 0.364 | 干净案例 + Reward (895 个) | `--metric rew` |
+| ΔTrn ↓ | 0.231 | 0.232 | 干净案例 + Transition (1,393 个) | `--metric trn` |
 
 可直接运行的示例及输出位置见[第四步（2）](#2-复现单项结果)。
 
